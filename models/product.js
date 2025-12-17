@@ -1,45 +1,113 @@
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const productController = require('../controllers/productcontroller');
+const mongoose = require('mongoose');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/products/'); // Make sure this directory exists
+const gradePriceSchema = new mongoose.Schema({
+  grade: {
+    type: String,
+    enum: ['A Grade', 'B Grade', 'All Mixed Grades'],
+    required: true
   },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'product-' + uniqueSuffix + path.extname(file.originalname));
+  pricePerUnit: {
+    type: Number,
+    required: true
+  },
+  totalQty: {
+    type: Number,
+    required: true
   }
 });
 
-const fileFilter = (req, file, cb) => {
-  // Accept images and videos
-  if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image and video files are allowed!'), false);
-  }
-};
-
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+const productSchema = new mongoose.Schema({
+  productId: {
+    type: String,
+    unique: true
+  },
+  categoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: true
+  },
+  subCategoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubCategory',
+    required: true
+  },
+  cropBriefDetails: {
+    type: String,
+    required: true
+  },
+  farmingType: {
+    type: String,
+    required: true
+  },
+  typeOfSeeds: {
+    type: String,
+    required: true
+  },
+  packagingType: {
+    type: String,
+    enum: ['KGs', 'box', 'crate', 'bunches', 'bag', 'sack', 'quanttal', 'ton'],
+    required: true
+  },
+  packageMeasurement: {
+    type: String,
+    required: true
+  },
+  unitMeasurement: {
+    type: String
+  },
+  gradePrices: [gradePriceSchema],
+  deliveryDate: {
+    type: Date,
+    required: true
+  },
+  deliveryTime: {
+    type: String,
+    required: true
+  },
+  nearestMarket: {
+    type: String,
+    required: true
+  },
+  cropPhotos: [{
+    type: String // Store file paths or URLs
+  }],
+  farmLocation: {
+    lat: String,
+    lng: String
+  },
+  sellerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'sold', 'inactive'],
+    default: 'active'
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-// Routes
-router.post('/add', upload.array('photos', 10), productController.addProduct);
-router.get('/all', productController.getAllProducts);
-router.get('/:id', productController.getProductById);
-router.get('/category/:categoryId', productController.getProductsByCategory);
-router.get('/subcategory/:subCategoryId', productController.getProductsBySubCategory);
-router.put('/update/:id', productController.updateProduct);
-router.delete('/delete/:id', productController.deleteProduct);
-router.patch('/status/:id', productController.updateProductStatus);
+// Auto-generate productId before saving
+productSchema.pre('save', async function() {
+  if (!this.productId) {
+    const Product = mongoose.model('Product');
+    const count = await Product.countDocuments();
+    this.productId = `PROD${String(count + 1).padStart(5, '0')}`;
+  }
+  this.updatedAt = Date.now();
+});
 
-module.exports = router;
+// Create indexes
+productSchema.index({ productId: 1 });
+productSchema.index({ categoryId: 1 });
+productSchema.index({ subCategoryId: 1 });
+productSchema.index({ status: 1 });
+
+module.exports = mongoose.model('Product', productSchema);

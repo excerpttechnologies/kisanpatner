@@ -25,7 +25,7 @@ const Category = require("../models/category");
 // ADD
 exports.addCategory = async (req, res) => {
   try {
-    const newCat = new Category({ categoryName: req.body.categoryName });
+    const newCat = new Category({ categoryName: req.body.categoryName,image: req.file ? req.file.filename : null });
     await newCat.save();
     res.json({ success: true, message: "Category added", data: newCat });
   } catch (err) {

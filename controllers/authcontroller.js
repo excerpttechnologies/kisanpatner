@@ -1,5 +1,3 @@
-
-
 const Farmer = require('../models/Farmer');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
@@ -7,11 +5,11 @@ const axios = require('axios');
 // In-memory OTP store (use Redis in production)
 const otpStore = new Map();
 
-// WhatsApp credentials
+
+// With this (using your credentials from first code):
 const WHATSAPP_TOKEN = 'EAAdzxxobLG4BPU8Lei8DhhuZCjlCthpNQ55ok3LGlpY1PSIzXsOnTrEje2BvKUZCjFPOWlTtJg1TezXPgjp7NrCPN5Nzv6x2BOF7lMQml80v4NNIIWFEZAy5H7ZBZAgk7ZBku0y7QIBIwMsQ9ZCVe6JpbAa9wSz1dHb7xeDJTw7msm7AoxF1YMumg01P1LGBAZDZD';
 const WHATSAPP_PHONE_ID = '671028016100461';
 const WHATSAPP_API_URL = `https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_ID}/messages`;
-
 // Generate 6-digit OTP
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -24,7 +22,7 @@ const sendWhatsAppOTP = async (phoneNumber, otp) => {
       to: phoneNumber,
       type: "template",
       template: {
-        name: "login_otp_new",
+        name: "login_otp_new",  // Your WhatsApp template name
         language: {
           code: "en_US"
         },
@@ -85,24 +83,24 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
-    // Check if user exists
-    const user = await Farmer.findOne({ 
+    // Check if farmer exists
+    const farmer = await Farmer.findOne({ 
       'personalInfo.mobileNo': mobileNo,
       isActive: true
     });
 
-    if (!user) {
+    if (!farmer) {
       return res.status(404).json({
         success: false,
-        message: 'User not found. Please register first.'
+        message: 'Farmer not found. Please register first.'
       });
     }
 
     // Check role if provided
-    if (role && user.role !== role) {
+    if (role && farmer.role !== role) {
       return res.status(403).json({
         success: false,
-        message: `This account is registered as ${user.role}, not ${role}`
+        message: `This account is registered as ${farmer.role}, not ${role}`
       });
     }
 
@@ -128,9 +126,11 @@ exports.sendOtp = async (req, res) => {
         message: 'OTP sent successfully to your WhatsApp'
       });
     } catch (whatsappError) {
+      // If WhatsApp fails, you might want to fall back to SMS
       console.error('WhatsApp send failed:', whatsappError);
       
-      // For development/testing
+      // For development/testing, you can return the OTP in response
+      // REMOVE THIS IN PRODUCTION
       res.status(200).json({
         success: true,
         message: 'OTP generated (WhatsApp service unavailable)',
@@ -197,24 +197,24 @@ exports.verifyOtpLogin = async (req, res) => {
       });
     }
 
-    // OTP is valid, get user details
-    const user = await Farmer.findOne({ 
+    // OTP is valid, get farmer details
+    const farmer = await Farmer.findOne({ 
       'personalInfo.mobileNo': mobileNo,
       isActive: true
     }).populate('commodities');
 
-    if (!user) {
+    if (!farmer) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Farmer not found'
       });
     }
 
     // Check role if provided
-    if (role && user.role !== role) {
+    if (role && farmer.role !== role) {
       return res.status(403).json({
         success: false,
-        message: `This account is registered as ${user.role}, not ${role}`
+        message: `This account is registered as ${farmer.role}, not ${role}`
       });
     }
 
@@ -222,31 +222,22 @@ exports.verifyOtpLogin = async (req, res) => {
     otpStore.delete(mobileNo);
 
     // Prepare response data
-    const userData = user.toObject();
-    delete userData.security.mpin;
-    delete userData.security.password;
-
-    // Prepare response based on role
-    let responseData = {
-      id: user._id,
-      name: user.personalInfo.name,
-      mobileNo: user.personalInfo.mobileNo,
-      email: user.personalInfo.email,
-      role: user.role,
-      state: user.personalInfo.state,
-      district: user.personalInfo.district
-    };
-
-    // Add transport-specific data
-    if (user.role === 'transport') {
-      responseData.vehicleType = user.transportInfo?.vehicleType;
-      responseData.vehicleNumber = user.transportInfo?.vehicleNumber;
-    }
+    const farmerData = farmer.toObject();
+    delete farmerData.security.mpin;
+    delete farmerData.security.password;
 
     res.status(200).json({
       success: true,
       message: 'Login successful!',
-      data: responseData
+      data: {
+        id: farmer._id,
+        name: farmer.personalInfo.name,
+        mobileNo: farmer.personalInfo.mobileNo,
+        email: farmer.personalInfo.email,
+        role: farmer.role,
+        state: farmer.personalInfo.state,
+        district: farmer.personalInfo.district
+      }
     });
 
   } catch (error) {
@@ -278,28 +269,28 @@ exports.loginWithMpin = async (req, res) => {
       });
     }
 
-    const user = await Farmer.findOne({ 
+    const farmer = await Farmer.findOne({ 
       'personalInfo.mobileNo': mobileNo,
       isActive: true 
     }).populate('commodities');
 
-    if (!user) {
+    if (!farmer) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Farmer not found'
       });
     }
 
     // Check role if provided
-    if (role && user.role !== role) {
+    if (role && farmer.role !== role) {
       return res.status(403).json({
         success: false,
-        message: `This account is registered as ${user.role}, not ${role}`
+        message: `This account is registered as ${farmer.role}, not ${role}`
       });
     }
 
     // Verify MPIN
-    const isMatch = await bcrypt.compare(mpin, user.security.mpin);
+    const isMatch = await bcrypt.compare(mpin, farmer.security.mpin);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -309,31 +300,22 @@ exports.loginWithMpin = async (req, res) => {
     }
 
     // Prepare response data
-    const userData = user.toObject();
-    delete userData.security.mpin;
-    delete userData.security.password;
-
-    // Prepare response based on role
-    let responseData = {
-      id: user._id,
-      name: user.personalInfo.name,
-      mobileNo: user.personalInfo.mobileNo,
-      email: user.personalInfo.email,
-      role: user.role,
-      state: user.personalInfo.state,
-      district: user.personalInfo.district
-    };
-
-    // Add transport-specific data
-    if (user.role === 'transport') {
-      responseData.vehicleType = user.transportInfo?.vehicleType;
-      responseData.vehicleNumber = user.transportInfo?.vehicleNumber;
-    }
+    const farmerData = farmer.toObject();
+    delete farmerData.security.mpin;
+    delete farmerData.security.password;
 
     res.status(200).json({
       success: true,
       message: 'Login successful!',
-      data: responseData
+      data: {
+        id: farmer._id,
+        name: farmer.personalInfo.name,
+        mobileNo: farmer.personalInfo.mobileNo,
+        email: farmer.personalInfo.email,
+        role: farmer.role,
+        state: farmer.personalInfo.state,
+        district: farmer.personalInfo.district
+      }
     });
 
   } catch (error) {
@@ -357,28 +339,28 @@ exports.loginWithPassword = async (req, res) => {
       });
     }
 
-    const user = await Farmer.findOne({ 
+    const farmer = await Farmer.findOne({ 
       'personalInfo.mobileNo': mobileNo,
       isActive: true 
     }).populate('commodities');
 
-    if (!user) {
+    if (!farmer) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Farmer not found'
       });
     }
 
     // Check role if provided
-    if (role && user.role !== role) {
+    if (role && farmer.role !== role) {
       return res.status(403).json({
         success: false,
-        message: `This account is registered as ${user.role}, not ${role}`
+        message: `This account is registered as ${farmer.role}, not ${role}`
       });
     }
 
     // Verify Password
-    const isMatch = await bcrypt.compare(password, user.security.password);
+    const isMatch = await bcrypt.compare(password, farmer.security.password);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -388,31 +370,22 @@ exports.loginWithPassword = async (req, res) => {
     }
 
     // Prepare response data
-    const userData = user.toObject();
-    delete userData.security.mpin;
-    delete userData.security.password;
-
-    // Prepare response based on role
-    let responseData = {
-      id: user._id,
-      name: user.personalInfo.name,
-      mobileNo: user.personalInfo.mobileNo,
-      email: user.personalInfo.email,
-      role: user.role,
-      state: user.personalInfo.state,
-      district: user.personalInfo.district
-    };
-
-    // Add transport-specific data
-    if (user.role === 'transport') {
-      responseData.vehicleType = user.transportInfo?.vehicleType;
-      responseData.vehicleNumber = user.transportInfo?.vehicleNumber;
-    }
+    const farmerData = farmer.toObject();
+    delete farmerData.security.mpin;
+    delete farmerData.security.password;
 
     res.status(200).json({
       success: true,
       message: 'Login successful!',
-      data: responseData
+      data: {
+        id: farmer._id,
+        name: farmer.personalInfo.name,
+        mobileNo: farmer.personalInfo.mobileNo,
+        email: farmer.personalInfo.email,
+        role: farmer.role,
+        state: farmer.personalInfo.state,
+        district: farmer.personalInfo.district
+      }
     });
 
   } catch (error) {

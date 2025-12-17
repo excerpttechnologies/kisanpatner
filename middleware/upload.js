@@ -1,3 +1,33 @@
+// const multer = require('multer');
+// const path = require('path');
+
+// // Storage configuration
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, "uploads/");
+//   },
+//   filename: (req, file, cb) => {
+//     cb(null, Date.now() + path.extname(file.originalname)); 
+//   }
+// });
+
+// // File filter
+// const fileFilter = (req, file, cb) => {
+//   const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+
+//   if (allowedTypes.includes(file.mimetype)) {
+//     cb(null, true);
+//   } else {
+//     cb(new Error("Invalid file type"), false);
+//   }
+// };
+
+// const upload = multer({
+//   storage,
+//   fileFilter
+// });
+
+// module.exports = upload;
 
 const multer = require('multer');
 const path = require('path');
@@ -8,8 +38,7 @@ const storage = multer.diskStorage({
     cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, Date.now() + path.extname(file.originalname)); 
   }
 });
 
@@ -20,17 +49,17 @@ const fileFilter = (req, file, cb) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`Invalid file type for ${file.fieldname}. Only JPEG, PNG, JPG and PDF files are allowed.`), false);
+    cb(new Error("Invalid file type"), false);
   }
 };
 
 const upload = multer({
-  storage: storage,
+  storage,
+  fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB max file size for all files
-  },
-  fileFilter: fileFilter
+    fileSize: 10 * 1024 * 1024, // 10MB per file
+    files: 10 // Maximum 10 files per request
+  }
 });
 
-// Export both the upload instance and a helper function for specific routes
 module.exports = upload;

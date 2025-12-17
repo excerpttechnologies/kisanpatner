@@ -2,7 +2,8 @@ const mongoose = require("mongoose");
 
 const CategorySchema = new mongoose.Schema({
   categoryId: { type: String, unique: true },
-  categoryName: { type: String, required: true }
+  categoryName: { type: String, required: true },
+   image: { type: String }
 });
 
 // Auto-generate categoryId

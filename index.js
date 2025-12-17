@@ -21,10 +21,13 @@ app.use("/farmer", require("./routes/authroutes"));
 // Note: All transport routes will be under /transport
 app.use("/transport", require("./routes/transportRoutes")); // This should include ALL transport routes
 
+// Product routes
+app.use("/product", require("./routes/productRoutes"));
+
 app.use(history());
 app.use(express.static(path.join(__dirname, "dist")));
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+app.get('*', (req, res) => {
+  res.status(404).send('Page not found');
 });
 
 app.listen(8080, () => {

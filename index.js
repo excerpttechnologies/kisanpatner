@@ -1,0 +1,21 @@
+const express = require("express");
+const cors = require("cors");
+const connectDB = require("./config/db");
+const path = require("path");
+const history = require('connect-history-api-fallback');
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+connectDB();
+
+app.use("/category", require("./routes/categoryRoutes"));
+app.use("/subcategory", require("./routes/subcategory"));
+
+app.use("/farmer/register", require("./routes/farmerRoutes"));
+app.use("/farmer", require("./routes/authroutes"));
+app.use('/product', require('./routes/product'));
+app.use(history());
+app.use(express.static(path.join(__dirname, 'dist')));
+app.listen(8080, () => console.log("Server running on port 8080"));

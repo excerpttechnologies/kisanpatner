@@ -41,3 +41,4 @@ router.delete('/:id', farmerController.deleteFarmer);
 router.delete('/:id/permanent', farmerController.permanentlyDeleteFarmer);
 
 module.exports = router;
+

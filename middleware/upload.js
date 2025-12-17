@@ -1,3 +1,4 @@
+
 const multer = require('multer');
 const path = require('path');
 
@@ -7,7 +8,8 @@ const storage = multer.diskStorage({
     cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); 
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
@@ -18,13 +20,17 @@ const fileFilter = (req, file, cb) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Invalid file type"), false);
+    cb(new Error(`Invalid file type for ${file.fieldname}. Only JPEG, PNG, JPG and PDF files are allowed.`), false);
   }
 };
 
 const upload = multer({
-  storage,
-  fileFilter
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB max file size for all files
+  },
+  fileFilter: fileFilter
 });
 
+// Export both the upload instance and a helper function for specific routes
 module.exports = upload;

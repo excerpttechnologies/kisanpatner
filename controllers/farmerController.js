@@ -2,7 +2,122 @@ const Farmer = require('../models/Farmer');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 
-// Register Farmer
+// // Register Farmer
+// exports.registerFarmer = async (req, res) => {
+//   try {
+//     const {
+//       personalInfo,
+//       farmLocation,
+//       farmLand,
+//       commodities,
+//       nearestMarkets,
+//       bankDetails,
+//       security,
+//       role
+//     } = req.body;
+
+//     // Parse JSON strings
+//     const parsedPersonalInfo = JSON.parse(personalInfo);
+//     const parsedFarmLocation = JSON.parse(farmLocation);
+//     const parsedFarmLand = JSON.parse(farmLand);
+//     const parsedCommodities = JSON.parse(commodities);
+//     const parsedNearestMarkets = JSON.parse(nearestMarkets);
+//     const parsedBankDetails = JSON.parse(bankDetails);
+//     const parsedSecurity = JSON.parse(security);
+
+//     // Check if farmer already exists
+//     const existingFarmer = await Farmer.findOne({ 
+//       'personalInfo.mobileNo': parsedPersonalInfo.mobileNo 
+//     });
+
+//     if (existingFarmer) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Farmer with this mobile number already exists'
+//       });
+//     }
+
+//     // Hash MPIN
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedMpin = await bcrypt.hash(parsedSecurity.mpin, salt);
+// const hashedPassword = await bcrypt.hash(parsedSecurity.password, salt);
+//     // Prepare document paths
+//     const documents = {};
+//     if (req.files) {
+//       if (req.files.panCard) {
+//         documents.panCard = `/uploads/${req.files.panCard[0].filename}`;
+//       }
+//       if (req.files.aadharFront) {
+//         documents.aadharFront = `/uploads/${req.files.aadharFront[0].filename}`;
+//       }
+//       if (req.files.aadharBack) {
+//         documents.aadharBack = `/uploads/${req.files.aadharBack[0].filename}`;
+//       }
+//       if (req.files.bankPassbook) {
+//         documents.bankPassbook = `/uploads/${req.files.bankPassbook[0].filename}`;
+//       }
+//     }
+
+//     // Create new farmer
+//     const newFarmer = new Farmer({
+//       personalInfo: parsedPersonalInfo,
+//       farmLocation: parsedFarmLocation,
+//       farmLand: parsedFarmLand,
+//       role: role,
+//       commodities: parsedCommodities,
+//       nearestMarkets: parsedNearestMarkets,
+//       bankDetails: parsedBankDetails,
+//       documents: documents,
+//       security: {
+//         referralCode: parsedSecurity.referralCode,
+//         mpin: hashedMpin,
+//         password: hashedPassword
+//       }
+//     });
+
+//     await newFarmer.save();
+
+//     res.status(201).json({
+//       success: true,
+//       message: 'Farmer registered successfully',
+//       data: {
+//         id: newFarmer._id,
+//         name: newFarmer.personalInfo.name,
+//         mobileNo: newFarmer.personalInfo.mobileNo
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Error in registerFarmer:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Internal server error',
+//       error: error.message
+//     });
+//   }
+// };
+const generateNextId = async (role) => {
+  const prefix = role === 'farmer' ? 'far' : 'trd';
+  
+  // Find the last registered user with this role
+  const lastUser = await Farmer.findOne({ 
+    farmerId: new RegExp(`^${prefix}-`) 
+  })
+  .sort({ farmerId: -1 })
+  .select('farmerId');
+  
+  if (!lastUser) {
+    // First user of this role
+    return `${prefix}-01`;
+  }
+  
+  // Extract the number from the last ID
+  const lastNumber = parseInt(lastUser.farmerId.split('-')[1]);
+  const nextNumber = lastNumber + 1;
+  
+  // Pad with zeros to maintain format
+  return `${prefix}-${String(nextNumber).padStart(2, '0')}`;
+};
+
 exports.registerFarmer = async (req, res) => {
   try {
     const {
@@ -15,6 +130,14 @@ exports.registerFarmer = async (req, res) => {
       security,
       role
     } = req.body;
+
+    // Validate role
+    if (!role || !['farmer', 'trader'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Role must be either "farmer" or "trader"'
+      });
+    }
 
     // Parse JSON strings
     const parsedPersonalInfo = JSON.parse(personalInfo);
@@ -29,7 +152,7 @@ exports.registerFarmer = async (req, res) => {
     const existingFarmer = await Farmer.findOne({ 
       'personalInfo.mobileNo': parsedPersonalInfo.mobileNo 
     });
-
+    
     if (existingFarmer) {
       return res.status(400).json({
         success: false,
@@ -37,10 +160,14 @@ exports.registerFarmer = async (req, res) => {
       });
     }
 
-    // Hash MPIN
+    // Generate unique farmer/trader ID
+    const farmerId = await generateNextId(role);
+
+    // Hash MPIN and Password
     const salt = await bcrypt.genSalt(10);
     const hashedMpin = await bcrypt.hash(parsedSecurity.mpin, salt);
-const hashedPassword = await bcrypt.hash(parsedSecurity.password, salt);
+    const hashedPassword = await bcrypt.hash(parsedSecurity.password, salt);
+
     // Prepare document paths
     const documents = {};
     if (req.files) {
@@ -58,8 +185,9 @@ const hashedPassword = await bcrypt.hash(parsedSecurity.password, salt);
       }
     }
 
-    // Create new farmer
+    // Create new farmer/trader
     const newFarmer = new Farmer({
+      farmerId: farmerId,
       personalInfo: parsedPersonalInfo,
       farmLocation: parsedFarmLocation,
       farmLand: parsedFarmLand,
@@ -79,13 +207,16 @@ const hashedPassword = await bcrypt.hash(parsedSecurity.password, salt);
 
     res.status(201).json({
       success: true,
-      message: 'Farmer registered successfully',
+      message: `${role.charAt(0).toUpperCase() + role.slice(1)} registered successfully`,
       data: {
         id: newFarmer._id,
+        farmerId: newFarmer.farmerId,
         name: newFarmer.personalInfo.name,
-        mobileNo: newFarmer.personalInfo.mobileNo
+        mobileNo: newFarmer.personalInfo.mobileNo,
+        role: newFarmer.role
       }
     });
+
   } catch (error) {
     console.error('Error in registerFarmer:', error);
     res.status(500).json({
@@ -95,7 +226,6 @@ const hashedPassword = await bcrypt.hash(parsedSecurity.password, salt);
     });
   }
 };
-
 // Get Farmer by ID
 exports.getFarmerById = async (req, res) => {
   try {

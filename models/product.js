@@ -1,5 +1,39 @@
 const mongoose = require('mongoose');
-
+const offerSchema = new mongoose.Schema({
+  offerId: {
+    type: String,
+    default: () => `OFF${Date.now()}`
+  },
+  traderId: {
+    type: String,
+    required: true
+  },
+  traderName: String,
+  offeredPrice: {
+    type: Number,
+    required: true
+  },
+  quantity: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'accepted', 'rejected', 'countered'],
+    default: 'pending'
+  },
+  counterPrice: Number,
+  counterQuantity: Number,
+  counterDate: Date,
+  isCounterPrivate: {  // ADD THIS FIELD
+    type: Boolean,
+    default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
 const gradePriceSchema = new mongoose.Schema({
   grade: {
     type: String,
@@ -13,13 +47,50 @@ const gradePriceSchema = new mongoose.Schema({
   totalQty: {
     type: Number,
     required: true
-  }
+  },
+  quantityType: {
+    type: String,
+    enum: ['bulk', 'split'],
+    required: true
+  },
+  priceType: {
+    type: String,
+    enum: ['fixed', 'negotiable'],
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['available', 'partially_sold', 'sold'],
+    default: 'available'
+  },
+  // ADD THIS - Array to track all purchases
+  purchaseHistory: [{
+    traderId: String,
+    traderName: String,
+    quantity: Number,
+    pricePerUnit: Number,
+    totalAmount: Number,
+    purchaseDate: {
+      type: Date,
+      default: Date.now
+    },
+    purchaseType: {
+      type: String,
+      enum: ['direct', 'offer_accepted'],
+      required: true
+    }
+  }],
+  offers: [offerSchema]
 });
 
 const productSchema = new mongoose.Schema({
   productId: {
     type: String,
     unique: true
+  },
+  farmerId:{
+    type:String,
+    required:true
   },
   categoryId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -105,7 +176,7 @@ productSchema.pre('save', async function() {
 });
 
 // Create indexes
-productSchema.index({ productId: 1 });
+// productSchema.index({ productId: 1 });
 productSchema.index({ categoryId: 1 });
 productSchema.index({ subCategoryId: 1 });
 productSchema.index({ status: 1 });

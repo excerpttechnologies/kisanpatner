@@ -9,13 +9,13 @@ app.use(express.json());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 connectDB();
-
+app.use('/uploads', express.static('uploads'));
 app.use("/category", require("./routes/categoryRoutes"));
 app.use("/subcategory", require("./routes/subcategory"));
 
 app.use("/farmer/register", require("./routes/farmerRoutes"));
 app.use("/farmer", require("./routes/authroutes"));
-app.use('/product', require('./routes/product'));
+app.use('/product', require('./routes/productRoutes'));
 app.use(history());
 app.use(express.static(path.join(__dirname, 'dist')));
 app.listen(8080, () => console.log("Server running on port 8080"));

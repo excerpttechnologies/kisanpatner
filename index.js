@@ -12,6 +12,7 @@ connectDB();
 app.use('/uploads', express.static('uploads'));
 app.use("/category", require("./routes/categoryRoutes"));
 app.use("/subcategory", require("./routes/subcategory"));
+app.use("/transport", require("./routes/transportRoutes"));
 
 app.use("/farmer/register", require("./routes/farmerRoutes"));
 app.use("/farmer", require("./routes/authroutes"));

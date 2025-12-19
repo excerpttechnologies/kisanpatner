@@ -258,7 +258,6 @@ exports.getFarmerById = async (req, res) => {
 
 // Get All Farmers
 exports.getAllFarmers = async (req, res) => {
-  console.log("Fetching all farmers");
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -281,7 +280,6 @@ exports.getAllFarmers = async (req, res) => {
       totalPages: Math.ceil(total / limit),
       data: farmers
     });
-    console.log("Fetched farmers:", farmers);
   } catch (error) {
     console.error('Error in getAllFarmers:', error);
     res.status(500).json({

@@ -17,6 +17,6 @@ app.use("/transport", require("./routes/transportRoutes"));
 app.use("/farmer/register", require("./routes/farmerRoutes"));
 app.use("/farmer", require("./routes/authroutes"));
 app.use('/product', require('./routes/productRoutes'));
-app.use(history());
+app.use('/payment', require('./routes/traderpaymentroutes'));
 app.use(express.static(path.join(__dirname, 'dist')));
 app.listen(8080, () => console.log("Server running on port 8080"));

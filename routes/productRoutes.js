@@ -50,4 +50,6 @@ router.post('/make-counter-offer', productController.makeCounterOffer);
 router.post('/reject-trader-offer', productController.rejectTraderOffer);
 // Get trader's purchase history
 router.get('/trader-purchases/:traderId', productController.getTraderPurchases);
+// Re-upload photos for a product
+router.post('/:productId/reupload-photos', upload.array('photos', 10), productController.reuploadPhotos);
 module.exports = router;

@@ -919,3 +919,39 @@ exports.getTraderPurchases = async (req, res) => {
     });
   }
 };
+
+// Re-upload photos for a product
+exports.reuploadPhotos = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const files = req.files || [];
+
+    if (files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No files uploaded' });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // Get new photo paths
+    const newPhotoPaths = files.map(file => file.path.replace(/\\/g, '/'));
+
+    // Replace old photos with new ones
+    product.cropPhotos = newPhotoPaths;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Photos updated successfully',
+      data: product
+    });
+  } catch (error) {
+    console.error('reuploadPhotos error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

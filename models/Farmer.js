@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const farmerSchema = new mongoose.Schema({
+  farmerId: { 
+    type: String, 
+    unique: true, 
+    required: true 
+  },
   personalInfo: {
     name: { type: String, required: true },
     mobileNo: { type: String, required: true, unique: true },

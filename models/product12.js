@@ -34,31 +34,10 @@ const offerSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-const transporterInfoSchema = new mongoose.Schema({
-  transporterId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Transporter'
-  },
-  transporterName: String,
-  transporterMobile: String,
-  vehicleType: String,
-  vehicleNumber: String,
-  vehicleCapacity: {
-    value: Number,
-    unit: String
-  },
-  driverName: String,
-  driverMobile: String,
-  assignedAt: {
-    type: Date,
-    default: Date.now
-  }
-}, { _id: false });
-
 const gradePriceSchema = new mongoose.Schema({
   grade: {
     type: String,
-    // enum: ['A Grade', 'B Grade', 'All Mixed Grades'],
+    enum: ['A Grade', 'B Grade', 'All Mixed Grades'],
     required: true
   },
   pricePerUnit: {
@@ -85,31 +64,22 @@ const gradePriceSchema = new mongoose.Schema({
     default: 'available'
   },
   // ADD THIS - Array to track all purchases
-purchaseHistory: [{
-  traderId: String,
-  traderName: String,
-  quantity: Number,
-  pricePerUnit: Number,
-  totalAmount: Number,
-  purchaseDate: {
-    type: Date,
-    default: Date.now
-  },
-  purchaseType: {
-    type: String,
-    enum: ['direct', 'offer_accepted'],
-    required: true
-  },
-  paymentStatus: {
-    type: String,
-    enum: ['pending', 'paid'],
-    default: 'pending'
-  },
-  razorpayPaymentId: String,
-  razorpayOrderId: String,
-   transporter: transporterInfoSchema,
-}],
-
+  purchaseHistory: [{
+    traderId: String,
+    traderName: String,
+    quantity: Number,
+    pricePerUnit: Number,
+    totalAmount: Number,
+    purchaseDate: {
+      type: Date,
+      default: Date.now
+    },
+    purchaseType: {
+      type: String,
+      enum: ['direct', 'offer_accepted'],
+      required: true
+    }
+  }],
   offers: [offerSchema]
 });
 

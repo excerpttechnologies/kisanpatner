@@ -12,9 +12,9 @@ const DEFAULT_STAGE_NAMES = [
 
 const getByName = async (req, res) => {
   try {
-    const name = req.query.name;
-    if (!name) return res.status(400).json({ success: false, message: 'Missing name query' });
-    const track = await Tracking.findOne({ name });
+    const farmerId = req.query.farmerId;
+    if (!farmerId) return res.status(400).json({ success: false, message: 'Missing name query' });
+    const track = await Tracking.findOne({ farmerId });
     if (!track) return res.status(404).json({ success: false, message: 'Tracking not found' });
     return res.json({ success: true, data: track });
   } catch (error) {

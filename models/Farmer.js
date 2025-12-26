@@ -1,10 +1,15 @@
 const mongoose = require('mongoose');
 
 const farmerSchema = new mongoose.Schema({
-  farmerId: { 
+farmerId: { 
     type: String, 
     unique: true, 
-    required: true 
+    sparse: true  // Add this
+  },
+  traderId: {  // Add this new field
+    type: String,
+    unique: true,
+    sparse: true
   },
   personalInfo: {
     name: { type: String, required: true },
@@ -32,27 +37,45 @@ const farmerSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Category' 
   }],
-  nearestMarkets: [{
-    name: { type: String }
-  }],
+ nearestMarkets: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Market'
+}],
+
+// Add subcategories field after commodities
+subcategories: [{ 
+  type: mongoose.Schema.Types.ObjectId, 
+  ref: 'SubCategory' 
+}],
   bankDetails: {
     accountHolderName: { type: String },
     accountNumber: { type: String },
     ifscCode: { type: String },
     branch: { type: String }
   },
-  documents: {
+ documents: {
     panCard: { type: String },
     aadharFront: { type: String },
     aadharBack: { type: String },
-    bankPassbook: { type: String }
+    bankPassbook: { type: String },
+    businessLicense: { type: String },  // Add
+    photo: { type: String },  // Add
+    businessNameBoard: { type: String }  // Add
   },
   security: {
     referralCode: { type: String },
     mpin: { type: String, required: true },
     password: { type: String, required: true }
   },
-  isActive: { type: Boolean, default: true },
+registrationStatus: {
+  type: String,
+  enum: ['pending', 'approved', 'rejected'],
+  default: 'pending'
+},
+isActive: { 
+  type: Boolean, 
+  default: false  // Change from true to false
+},
   registeredAt: { type: Date, default: Date.now }
 });
 

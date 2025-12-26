@@ -26,7 +26,7 @@ router.get('/stats', farmerController.getFarmerStats);
 
 router.get('/:id', farmerController.getFarmerById);
 
-
+router.put('/update/:id', farmerController.updateFarmer);
 router.put('/:id', upload.fields([
   { name: 'panCard', maxCount: 1 },
   { name: 'aadharFront', maxCount: 1 },

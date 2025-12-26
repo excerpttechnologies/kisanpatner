@@ -95,6 +95,8 @@ const path = require('path');
 //     });
 //   }
 // };
+
+
 const generateNextId = async (role) => {
   const prefix = role === 'farmer' ? 'far' : 'trd';
   
@@ -144,9 +146,11 @@ exports.registerFarmer = async (req, res) => {
     const parsedFarmLocation = JSON.parse(farmLocation);
     const parsedFarmLand = JSON.parse(farmLand);
     const parsedCommodities = JSON.parse(commodities);
-    const parsedNearestMarkets = JSON.parse(nearestMarkets);
+ 
     const parsedBankDetails = JSON.parse(bankDetails);
     const parsedSecurity = JSON.parse(security);
+const parsedSubcategories = JSON.parse(req.body.subcategories || '[]');
+const parsedNearestMarkets = JSON.parse(nearestMarkets);  // This should now be an array of IDs
 
     // Check if farmer already exists
     const existingFarmer = await Farmer.findOne({ 
@@ -169,38 +173,58 @@ exports.registerFarmer = async (req, res) => {
     const hashedPassword = await bcrypt.hash(parsedSecurity.password, salt);
 
     // Prepare document paths
-    const documents = {};
-    if (req.files) {
-      if (req.files.panCard) {
-        documents.panCard = `/uploads/${req.files.panCard[0].filename}`;
-      }
-      if (req.files.aadharFront) {
-        documents.aadharFront = `/uploads/${req.files.aadharFront[0].filename}`;
-      }
-      if (req.files.aadharBack) {
-        documents.aadharBack = `/uploads/${req.files.aadharBack[0].filename}`;
-      }
-      if (req.files.bankPassbook) {
-        documents.bankPassbook = `/uploads/${req.files.bankPassbook[0].filename}`;
-      }
+// Prepare document paths
+const documents = {};
+if (req.files) {
+  if (req.files.panCard) {
+    documents.panCard = `/uploads/${req.files.panCard[0].filename}`;
+  }
+  if (req.files.aadharFront) {
+    documents.aadharFront = `/uploads/${req.files.aadharFront[0].filename}`;
+  }
+  if (req.files.aadharBack) {
+    documents.aadharBack = `/uploads/${req.files.aadharBack[0].filename}`;
+  }
+  
+  if (role === 'farmer') {
+    if (req.files.bankPassbook) {
+      documents.bankPassbook = `/uploads/${req.files.bankPassbook[0].filename}`;
     }
+  } else if (role === 'trader') {
+    if (req.files.businessLicense) {
+      documents.businessLicense = `/uploads/${req.files.businessLicense[0].filename}`;
+    }
+    if (req.files.photo) {
+      documents.photo = `/uploads/${req.files.photo[0].filename}`;
+    }
+    if (req.files.businessNameBoard) {
+      documents.businessNameBoard = `/uploads/${req.files.businessNameBoard[0].filename}`;
+    }
+  }
+}
 
     // Create new farmer/trader
     const newFarmer = new Farmer({
-      farmerId: farmerId,
+  [role === 'farmer' ? 'farmerId' : 'traderId']: farmerId,
       personalInfo: parsedPersonalInfo,
       farmLocation: parsedFarmLocation,
       farmLand: parsedFarmLand,
       role: role,
+   
+   
       commodities: parsedCommodities,
-      nearestMarkets: parsedNearestMarkets,
+  subcategories: parsedSubcategories,  // ADD THIS
+  nearestMarkets: parsedNearestMarkets,  // Now array of ObjectIds
       bankDetails: parsedBankDetails,
+      
       documents: documents,
       security: {
         referralCode: parsedSecurity.referralCode,
         mpin: hashedMpin,
         password: hashedPassword
-      }
+      },
+      registrationStatus: 'pending',  // ADD THIS
+  isActive: false  // ADD THIS (or remove if default is false in schema)
     });
 
     await newFarmer.save();
@@ -291,62 +315,43 @@ exports.getAllFarmers = async (req, res) => {
     });
   }
 };
-
 // Update Farmer
 exports.updateFarmer = async (req, res) => {
   try {
-    const updates = req.body;
-    
-    // If MPIN is being updated, hash it
-    if (updates.security && updates.security.mpin) {
-      const salt = await bcrypt.genSalt(10);
-      updates.security.mpin = await bcrypt.hash(updates.security.mpin, salt);
-    }
+    const { id } = req.params;
+    const updateData = req.body;
 
-    // Handle document updates if new files are uploaded
-    if (req.files) {
-      if (!updates.documents) {
-        updates.documents = {};
-      }
-      
-      if (req.files.panCard) {
-        updates.documents.panCard = `/uploads/${req.files.panCard[0].filename}`;
-      }
-      if (req.files.aadharFront) {
-        updates.documents.aadharFront = `/uploads/${req.files.aadharFront[0].filename}`;
-      }
-      if (req.files.aadharBack) {
-        updates.documents.aadharBack = `/uploads/${req.files.aadharBack[0].filename}`;
-      }
-      if (req.files.bankPassbook) {
-        updates.documents.bankPassbook = `/uploads/${req.files.bankPassbook[0].filename}`;
-      }
-    }
+    // Remove fields that shouldn't be updated directly
+    delete updateData._id;
+    delete updateData.farmerId;
+    delete updateData.security; // Don't allow security updates from this endpoint
+    delete updateData.registeredAt;
 
-    const farmer = await Farmer.findByIdAndUpdate(
-      req.params.id,
-      updates,
+    const updatedFarmer = await Farmer.findByIdAndUpdate(
+      id,
+      { $set: updateData },
       { new: true, runValidators: true }
-    ).populate('commodities');
+    )
+    .populate('commodities')
+    .populate('subcategories')
+    .populate('nearestMarkets')
+    .select('-security.mpin -security.password');
 
-    if (!farmer) {
+    if (!updatedFarmer) {
       return res.status(404).json({
         success: false,
         message: 'Farmer not found'
       });
     }
 
-    // Don't send MPIN in response
-    const farmerData = farmer.toObject();
-    delete farmerData.security.mpin;
-
     res.status(200).json({
       success: true,
       message: 'Farmer updated successfully',
-      data: farmerData
+      data: updatedFarmer
     });
+
   } catch (error) {
-    console.error('Error in updateFarmer:', error);
+    console.error('Error updating farmer:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -354,6 +359,7 @@ exports.updateFarmer = async (req, res) => {
     });
   }
 };
+
 
 // Delete Farmer (Soft Delete)
 exports.deleteFarmer = async (req, res) => {

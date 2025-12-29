@@ -1,6 +1,6 @@
-const Product = require('../models/product');
-const fs = require('fs');
-const path = require('path');
+const Product = require("../models/product");
+const fs = require("fs");
+const path = require("path");
 
 // // Add new product
 // exports.addProduct = async (req, res) => {
@@ -27,8 +27,8 @@ const path = require('path');
 //     const cropPhotos = req.files ? req.files.map(file => file.path) : [];
 
 //     // Parse gradePrices if it's a string
-//     const parsedGradePrices = typeof gradePrices === 'string' 
-//       ? JSON.parse(gradePrices) 
+//     const parsedGradePrices = typeof gradePrices === 'string'
+//       ? JSON.parse(gradePrices)
 //       : gradePrices;
 
 //     // Parse farmLocation if it's a string
@@ -88,7 +88,7 @@ exports.addProduct = async (req, res) => {
       farmLocation,
       gradePrices,
       sellerId,
-      farmerId
+      farmerId,
     } = req.body;
 
     // 🔴 REQUIRED FIELD VALIDATION (IMPORTANT)
@@ -99,7 +99,8 @@ exports.addProduct = async (req, res) => {
       !farmingType ||
       !typeOfSeeds ||
       !packagingType ||
-      !packageMeasurement || packageMeasurement.trim() === '' ||
+      !packageMeasurement ||
+      packageMeasurement.trim() === "" ||
       !deliveryDate ||
       !deliveryTime ||
       !nearestMarket ||
@@ -107,29 +108,27 @@ exports.addProduct = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: 'All required fields must be filled'
+        message: "All required fields must be filled",
       });
     }
 
     // Handle file uploads
-    const cropPhotos = req.files ? req.files.map(file => file.path) : [];
+    const cropPhotos = req.files ? req.files.map((file) => file.path) : [];
 
     // Parse gradePrices
     const parsedGradePrices =
-      typeof gradePrices === 'string'
-        ? JSON.parse(gradePrices)
-        : gradePrices;
+      typeof gradePrices === "string" ? JSON.parse(gradePrices) : gradePrices;
 
     if (!parsedGradePrices || !parsedGradePrices.length) {
       return res.status(400).json({
         success: false,
-        message: 'Grade prices are required'
+        message: "Grade prices are required",
       });
     }
 
     // Parse farmLocation
     const parsedFarmLocation =
-      typeof farmLocation === 'string'
+      typeof farmLocation === "string"
         ? JSON.parse(farmLocation)
         : farmLocation;
 
@@ -149,23 +148,22 @@ exports.addProduct = async (req, res) => {
       farmLocation: parsedFarmLocation,
       gradePrices: parsedGradePrices,
       cropPhotos,
-      sellerId
+      sellerId,
     });
 
     const savedProduct = await newProduct.save();
 
     res.status(201).json({
       success: true,
-      message: 'Product added successfully',
-      data: savedProduct
+      message: "Product added successfully",
+      data: savedProduct,
     });
-
   } catch (error) {
-    console.error('Error adding product:', error);
+    console.error("Error adding product:", error);
     res.status(500).json({
       success: false,
-      message: 'Error adding product',
-      error: error.message
+      message: "Error adding product",
+      error: error.message,
     });
   }
 };
@@ -177,22 +175,23 @@ exports.addProduct = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
   try {
     const products = await Product.find()
-      .populate('categoryId', 'categoryName')
-      .populate('subCategoryId', 'subCategoryName')
+      .populate("categoryId", "categoryName")
+      .populate("subCategoryId", "subCategoryName")
       .sort({ createdAt: -1 });
 
     // ADD THIS: Filter offers based on trader
     const traderId = req.query.traderId; // Get from query params
-    
+
     if (traderId) {
       // Filter offers to show only relevant ones for this trader
-      products.forEach(product => {
-        product.gradePrices.forEach(grade => {
+      products.forEach((product) => {
+        product.gradePrices.forEach((grade) => {
           if (grade.offers && grade.offers.length > 0) {
             // Show only offers from this trader OR non-private countered offers
-            grade.offers = grade.offers.filter(offer => 
-              offer.traderId === traderId || 
-              (offer.status === 'pending' && !offer.isCounterPrivate)
+            grade.offers = grade.offers.filter(
+              (offer) =>
+                offer.traderId === traderId ||
+                (offer.status === "pending" && !offer.isCounterPrivate)
             );
           }
         });
@@ -202,14 +201,14 @@ exports.getAllProducts = async (req, res) => {
     res.status(200).json({
       success: true,
       count: products.length,
-      data: products
+      data: products,
     });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error("Error fetching products:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching products',
-      error: error.message
+      message: "Error fetching products",
+      error: error.message,
     });
   }
 };
@@ -218,26 +217,26 @@ exports.getAllProducts = async (req, res) => {
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
-      .populate('categoryId', 'categoryName')
-      .populate('subCategoryId', 'subCategoryName');
+      .populate("categoryId", "categoryName")
+      .populate("subCategoryId", "subCategoryName");
 
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: "Product not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: product
+      data: product,
     });
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error("Error fetching product:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching product',
-      error: error.message
+      message: "Error fetching product",
+      error: error.message,
     });
   }
 };
@@ -249,13 +248,12 @@ exports.getProductsByFarmer = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: products
+      data: products,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -263,21 +261,21 @@ exports.getProductsByFarmer = async (req, res) => {
 exports.getProductsByCategory = async (req, res) => {
   try {
     const products = await Product.find({ categoryId: req.params.categoryId })
-      .populate('categoryId', 'categoryName')
-      .populate('subCategoryId', 'subCategoryName')
+      .populate("categoryId", "categoryName")
+      .populate("subCategoryId", "subCategoryName")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: products.length,
-      data: products
+      data: products,
     });
   } catch (error) {
-    console.error('Error fetching products by category:', error);
+    console.error("Error fetching products by category:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching products',
-      error: error.message
+      message: "Error fetching products",
+      error: error.message,
     });
   }
 };
@@ -285,22 +283,24 @@ exports.getProductsByCategory = async (req, res) => {
 // Get products by subcategory
 exports.getProductsBySubCategory = async (req, res) => {
   try {
-    const products = await Product.find({ subCategoryId: req.params.subCategoryId })
-      .populate('categoryId', 'categoryName')
-      .populate('subCategoryId', 'subCategoryName')
+    const products = await Product.find({
+      subCategoryId: req.params.subCategoryId,
+    })
+      .populate("categoryId", "categoryName")
+      .populate("subCategoryId", "subCategoryName")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: products.length,
-      data: products
+      data: products,
     });
   } catch (error) {
-    console.error('Error fetching products by subcategory:', error);
+    console.error("Error fetching products by subcategory:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching products',
-      error: error.message
+      message: "Error fetching products",
+      error: error.message,
     });
   }
 };
@@ -317,21 +317,21 @@ exports.updateProduct = async (req, res) => {
     if (!updatedProduct) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: "Product not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Product updated successfully',
-      data: updatedProduct
+      message: "Product updated successfully",
+      data: updatedProduct,
     });
   } catch (error) {
-    console.error('Error updating product:', error);
+    console.error("Error updating product:", error);
     res.status(500).json({
       success: false,
-      message: 'Error updating product',
-      error: error.message
+      message: "Error updating product",
+      error: error.message,
     });
   }
 };
@@ -344,13 +344,13 @@ exports.deleteProduct = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: "Product not found",
       });
     }
 
     // Delete associated photos
     if (product.cropPhotos && product.cropPhotos.length > 0) {
-      product.cropPhotos.forEach(photoPath => {
+      product.cropPhotos.forEach((photoPath) => {
         if (fs.existsSync(photoPath)) {
           fs.unlinkSync(photoPath);
         }
@@ -361,14 +361,14 @@ exports.deleteProduct = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Product deleted successfully'
+      message: "Product deleted successfully",
     });
   } catch (error) {
-    console.error('Error deleting product:', error);
+    console.error("Error deleting product:", error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting product',
-      error: error.message
+      message: "Error deleting product",
+      error: error.message,
     });
   }
 };
@@ -379,85 +379,86 @@ exports.deleteProduct = async (req, res) => {
 
 exports.makeOffer = async (req, res) => {
   try {
-    const { productId, gradeId, traderId, traderName, offeredPrice, quantity } = req.body;
+    const { productId, gradeId, traderId, traderName, offeredPrice, quantity } =
+      req.body;
 
     // Validate required fields
     if (!productId || !gradeId || !traderId || !offeredPrice || !quantity) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required fields' 
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
       });
     }
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Product not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
       });
     }
 
     const grade = product.gradePrices.id(gradeId);
     if (!grade) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Grade not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Grade not found",
       });
     }
 
     // Check if priceType is negotiable
-    if (grade.priceType !== 'negotiable') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'This grade has a fixed price and is not negotiable' 
+    if (grade.priceType !== "negotiable") {
+      return res.status(400).json({
+        success: false,
+        message: "This grade has a fixed price and is not negotiable",
       });
     }
 
     // Check if grade is already sold
-    if (grade.status === 'sold') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'This grade is already sold out' 
+    if (grade.status === "sold") {
+      return res.status(400).json({
+        success: false,
+        message: "This grade is already sold out",
       });
     }
 
     // Check quantity availability
     if (quantity > grade.totalQty) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Requested quantity exceeds available quantity' 
+      return res.status(400).json({
+        success: false,
+        message: "Requested quantity exceeds available quantity",
       });
     }
 
     // For bulk, quantity must match totalQty
-    if (grade.quantityType === 'bulk' && quantity !== grade.totalQty) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Bulk purchase requires buying full quantity' 
+    if (grade.quantityType === "bulk" && quantity !== grade.totalQty) {
+      return res.status(400).json({
+        success: false,
+        message: "Bulk purchase requires buying full quantity",
       });
     }
 
     // Add offer
     grade.offers.push({
       traderId,
-      traderName: traderName || 'Unknown Trader',
+      traderName: traderName || "Unknown Trader",
       offeredPrice,
       quantity,
-      status: 'pending'
+      status: "pending",
     });
 
     await product.save();
 
     res.status(200).json({
       success: true,
-      message: 'Offer submitted successfully',
-      data: product
+      message: "Offer submitted successfully",
+      data: product,
     });
   } catch (error) {
-    console.error('Error making offer:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    console.error("Error making offer:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
@@ -470,49 +471,49 @@ exports.acceptListedPrice = async (req, res) => {
 
     // Validate required fields
     if (!productId || !gradeId || !traderId || !quantity) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required fields' 
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
       });
     }
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Product not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
       });
     }
 
     const grade = product.gradePrices.id(gradeId);
     if (!grade) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Grade not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Grade not found",
       });
     }
 
     // Check if grade is already sold
-    if (grade.status === 'sold') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'This grade is already sold out' 
+    if (grade.status === "sold") {
+      return res.status(400).json({
+        success: false,
+        message: "This grade is already sold out",
       });
     }
 
     // Check quantity availability
     if (quantity > grade.totalQty) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Insufficient quantity available' 
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient quantity available",
       });
     }
 
     // For bulk, must buy all
-    if (grade.quantityType === 'bulk' && quantity !== grade.totalQty) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Bulk purchase requires full quantity' 
+    if (grade.quantityType === "bulk" && quantity !== grade.totalQty) {
+      return res.status(400).json({
+        success: false,
+        message: "Bulk purchase requires full quantity",
       });
     }
 
@@ -520,13 +521,13 @@ exports.acceptListedPrice = async (req, res) => {
     const totalAmount = grade.pricePerUnit * quantity;
 
     // ADD THIS - Get trader name from request or default
-    const traderName = req.body.traderName || 'Unknown Trader';
+    const traderName = req.body.traderName || "Unknown Trader";
 
     // ADD THIS - Record purchase in history
     if (!grade.purchaseHistory) {
       grade.purchaseHistory = [];
     }
-    
+
     grade.purchaseHistory.push({
       traderId: traderId,
       traderName: traderName,
@@ -534,7 +535,7 @@ exports.acceptListedPrice = async (req, res) => {
       pricePerUnit: grade.pricePerUnit,
       totalAmount: totalAmount,
       purchaseDate: new Date(),
-      purchaseType: 'direct'
+      purchaseType: "direct",
     });
 
     // Update quantity
@@ -542,9 +543,9 @@ exports.acceptListedPrice = async (req, res) => {
 
     // Update grade status based on remaining quantity
     if (grade.totalQty === 0) {
-      grade.status = 'sold';
+      grade.status = "sold";
     } else {
-      grade.status = 'partially_sold';
+      grade.status = "partially_sold";
     }
 
     // Save the product
@@ -552,7 +553,7 @@ exports.acceptListedPrice = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: grade.totalQty === 0 ? 'Grade sold out!' : 'Purchase successful',
+      message: grade.totalQty === 0 ? "Grade sold out!" : "Purchase successful",
       data: {
         productId: product._id,
         gradeId: grade._id,
@@ -563,23 +564,20 @@ exports.acceptListedPrice = async (req, res) => {
         purchaseDetails: {
           quantity,
           pricePerUnit: grade.pricePerUnit,
-          totalAmount
-        }
-      }
+          totalAmount,
+        },
+      },
     });
   } catch (error) {
-    console.error('Error accepting offer:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    console.error("Error accepting offer:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
 
-
 // REPLACE the entire acceptTraderOffer function in productController.js
-
-
 
 // exports.acceptTraderOffer = async (req, res) => {
 //   try {
@@ -587,49 +585,49 @@ exports.acceptListedPrice = async (req, res) => {
 
 //     const product = await Product.findById(productId);
 //     if (!product) {
-//       return res.status(404).json({ 
-//         success: false, 
-//         message: 'Product not found' 
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Product not found'
 //       });
 //     }
 
 //     const grade = product.gradePrices.id(gradeId);
 //     if (!grade) {
-//       return res.status(404).json({ 
-//         success: false, 
-//         message: 'Grade not found' 
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Grade not found'
 //       });
 //     }
 
 //     const offer = grade.offers.id(offerId);
 //     if (!offer) {
-//       return res.status(404).json({ 
-//         success: false, 
-//         message: 'Offer not found' 
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Offer not found'
 //       });
 //     }
 
 //     // Check if offer is still pending
 //     if (offer.status !== 'pending') {
-//       return res.status(400).json({ 
-//         success: false, 
-//         message: 'This offer has already been processed' 
+//       return res.status(400).json({
+//         success: false,
+//         message: 'This offer has already been processed'
 //       });
 //     }
 
 //     // Check quantity availability
 //     if (offer.quantity > grade.totalQty) {
-//       return res.status(400).json({ 
-//         success: false, 
-//         message: 'Insufficient quantity available' 
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Insufficient quantity available'
 //       });
 //     }
 
 //     // For bulk, validate quantity
 //     if (grade.quantityType === 'bulk' && offer.quantity !== grade.totalQty) {
-//       return res.status(400).json({ 
-//         success: false, 
-//         message: 'Bulk purchase requires full quantity' 
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Bulk purchase requires full quantity'
 //       });
 //     }
 
@@ -676,9 +674,9 @@ exports.acceptListedPrice = async (req, res) => {
 //     });
 //   } catch (error) {
 //     console.error('Error accepting trader offer:', error);
-//     res.status(500).json({ 
-//       success: false, 
-//       message: error.message 
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
 //     });
 //   }
 // };
@@ -688,49 +686,49 @@ exports.acceptTraderOffer = async (req, res) => {
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Product not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
       });
     }
 
     const grade = product.gradePrices.id(gradeId);
     if (!grade) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Grade not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Grade not found",
       });
     }
 
     const offer = grade.offers.id(offerId);
     if (!offer) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Offer not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Offer not found",
       });
     }
 
     // Check if offer is still pending
-    if (offer.status !== 'pending') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'This offer has already been processed' 
+    if (offer.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "This offer has already been processed",
       });
     }
 
     // Check quantity availability
     if (offer.quantity > grade.totalQty) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Insufficient quantity available' 
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient quantity available",
       });
     }
 
     // For bulk, validate quantity
-    if (grade.quantityType === 'bulk' && offer.quantity !== grade.totalQty) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Bulk purchase requires full quantity' 
+    if (grade.quantityType === "bulk" && offer.quantity !== grade.totalQty) {
+      return res.status(400).json({
+        success: false,
+        message: "Bulk purchase requires full quantity",
       });
     }
 
@@ -738,21 +736,21 @@ exports.acceptTraderOffer = async (req, res) => {
     const totalAmount = offer.offeredPrice * offer.quantity;
 
     // Update offer status
-    offer.status = 'accepted';
+    offer.status = "accepted";
 
     // ADD THIS - Record purchase in history
     if (!grade.purchaseHistory) {
       grade.purchaseHistory = [];
     }
-    
+
     grade.purchaseHistory.push({
       traderId: offer.traderId,
-      traderName: offer.traderName || 'Unknown Trader',
+      traderName: offer.traderName || "Unknown Trader",
       quantity: offer.quantity,
       pricePerUnit: offer.offeredPrice,
       totalAmount: totalAmount,
       purchaseDate: new Date(),
-      purchaseType: 'offer_accepted'
+      purchaseType: "offer_accepted",
     });
 
     // Update grade quantity
@@ -760,16 +758,19 @@ exports.acceptTraderOffer = async (req, res) => {
 
     // Update grade status based on remaining quantity
     if (grade.totalQty === 0) {
-      grade.status = 'sold';
+      grade.status = "sold";
     } else {
-      grade.status = 'partially_sold';
+      grade.status = "partially_sold";
     }
 
     await product.save();
 
     res.status(200).json({
       success: true,
-      message: grade.totalQty === 0 ? 'Grade sold out!' : 'Offer accepted successfully',
+      message:
+        grade.totalQty === 0
+          ? "Grade sold out!"
+          : "Offer accepted successfully",
       data: {
         productId: product._id,
         gradeId: grade._id,
@@ -781,40 +782,47 @@ exports.acceptTraderOffer = async (req, res) => {
         purchaseDetails: {
           quantity: offer.quantity,
           pricePerUnit: offer.offeredPrice,
-          totalAmount
-        }
-      }
+          totalAmount,
+        },
+      },
     });
   } catch (error) {
-    console.error('Error accepting trader offer:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    console.error("Error accepting trader offer:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
 // Make counter offer - REPLACE EXISTING
 exports.makeCounterOffer = async (req, res) => {
   try {
-    const { productId, gradeId, offerId, counterPrice, counterQuantity } = req.body;
+    const { productId, gradeId, offerId, counterPrice, counterQuantity } =
+      req.body;
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
     }
 
     const grade = product.gradePrices.id(gradeId);
     if (!grade) {
-      return res.status(404).json({ success: false, message: 'Grade not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Grade not found" });
     }
 
     const offer = grade.offers.id(offerId);
     if (!offer) {
-      return res.status(404).json({ success: false, message: 'Offer not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Offer not found" });
     }
 
     // Update the offer with counter values
-    offer.status = 'countered';
+    offer.status = "countered";
     offer.counterPrice = counterPrice;
     offer.counterQuantity = counterQuantity;
     offer.counterDate = new Date();
@@ -824,11 +832,11 @@ exports.makeCounterOffer = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Counter offer sent successfully',
-      data: product
+      message: "Counter offer sent successfully",
+      data: product,
     });
   } catch (error) {
-    console.error('Error making counter offer:', error);
+    console.error("Error making counter offer:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -840,64 +848,131 @@ exports.rejectTraderOffer = async (req, res) => {
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
     }
 
     const grade = product.gradePrices.id(gradeId);
     if (!grade) {
-      return res.status(404).json({ success: false, message: 'Grade not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Grade not found" });
     }
 
     const offer = grade.offers.id(offerId);
     if (!offer) {
-      return res.status(404).json({ success: false, message: 'Offer not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Offer not found" });
     }
 
-    offer.status = 'rejected';
+    offer.status = "rejected";
     await product.save();
 
     res.status(200).json({
       success: true,
-      message: 'Offer rejected successfully'
+      message: "Offer rejected successfully",
     });
   } catch (error) {
-    console.error('Error rejecting offer:', error);
+    console.error("Error rejecting offer:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-
 // Get trader's purchase history
+// exports.getTraderPurchases = async (req, res) => {
+//   try {
+//     const { traderId } = req.params;
+
+//     const products = await Product.find({
+//       "gradePrices.purchaseHistory.traderId": traderId,
+//     })
+//       .populate("categoryId", "categoryName")
+//       .populate("subCategoryId", "subCategoryName");
+
+//     const purchases = [];
+
+//     products.forEach((product) => {
+//       product.gradePrices.forEach((grade) => {
+//         if (grade.purchaseHistory) {
+//           grade.purchaseHistory
+//             .filter((p) => p.traderId === traderId)
+//             .forEach((purchase) => {
+//               purchases.push({
+//                 _id: purchase._id,
+//                 product: {
+//                   _id: product._id,
+//                   farmerId: product.farmerId,
+//                   productId: product.productId,
+//                   cropBriefDetails: product.cropBriefDetails,
+//                   unitMeasurement: product.unitMeasurement,
+//                   categoryName: product.categoryId?.categoryName,
+//                   deliveryDate: product.deliveryDate,
+//                   subCategoryName: product.subCategoryId?.subCategoryName,
+//                 },
+//                 grade: grade.grade,
+//                 ...purchase._doc,
+//               });
+//             });
+//         }
+//       });
+//     });
+
+//     // Sort by date, newest first
+//     purchases.sort(
+//       (a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate)
+//     );
+//     console.log("data", purchases);
+//     res.status(200).json({
+//       success: true,
+//       count: purchases.length,
+//       data: purchases,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+// Updated getTraderPurchases in productController.js
+
 exports.getTraderPurchases = async (req, res) => {
   try {
     const { traderId } = req.params;
-    
+
     const products = await Product.find({
-      'gradePrices.purchaseHistory.traderId': traderId
+      "gradePrices.purchaseHistory.traderId": traderId,
     })
-    .populate('categoryId', 'categoryName')
-    .populate('subCategoryId', 'subCategoryName');
+      .populate("categoryId", "categoryName")
+      .populate("subCategoryId", "subCategoryName");
 
     const purchases = [];
-    
-    products.forEach(product => {
-      product.gradePrices.forEach(grade => {
+
+    products.forEach((product) => {
+      product.gradePrices.forEach((grade) => {
         if (grade.purchaseHistory) {
           grade.purchaseHistory
-            .filter(p => p.traderId === traderId)
-            .forEach(purchase => {
+            .filter((p) => 
+              p.traderId === traderId && 
+              !p.orderCreated // 🔥 FILTER: Only show items not yet ordered
+            )
+            .forEach((purchase) => {
               purchases.push({
                 _id: purchase._id,
                 product: {
                   _id: product._id,
+                  farmerId: product.farmerId,
                   productId: product.productId,
                   cropBriefDetails: product.cropBriefDetails,
                   unitMeasurement: product.unitMeasurement,
                   categoryName: product.categoryId?.categoryName,
-                  subCategoryName: product.subCategoryId?.subCategoryName
+                  deliveryDate: product.deliveryDate,
+                  subCategoryName: product.subCategoryId?.subCategoryName,
                 },
                 grade: grade.grade,
-                ...purchase._doc
+                ...purchase._doc,
               });
             });
         }
@@ -905,53 +980,119 @@ exports.getTraderPurchases = async (req, res) => {
     });
 
     // Sort by date, newest first
-    purchases.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
+    purchases.sort(
+      (a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate)
+    );
 
     res.status(200).json({
       success: true,
       count: purchases.length,
-      data: purchases
+      data: purchases,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
-
-// Re-upload photos for a product
-exports.reuploadPhotos = async (req, res) => {
+// ADD THIS NEW FUNCTION - Batch make offer for multiple grades
+exports.makeOfferBatch = async (req, res) => {
   try {
-    const { productId } = req.params;
-    const files = req.files || [];
+    const { productId, traderId, traderName, offers } = req.body;
+    // offers is an array: [{gradeId, offeredPrice, quantity}, ...]
 
-    if (files.length === 0) {
-      return res.status(400).json({ success: false, message: 'No files uploaded' });
+    if (
+      !productId ||
+      !traderId ||
+      !offers ||
+      !Array.isArray(offers) ||
+      offers.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields or invalid offers array",
+      });
     }
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
     }
 
-    // Get new photo paths
-    const newPhotoPaths = files.map(file => file.path.replace(/\\/g, '/'));
+    // Process all offers in a single transaction
+    const results = [];
 
-    // Replace old photos with new ones
-    product.cropPhotos = newPhotoPaths;
+    for (const offerData of offers) {
+      const { gradeId, offeredPrice, quantity } = offerData;
+
+      const grade = product.gradePrices.id(gradeId);
+      if (!grade) {
+        results.push({ gradeId, success: false, message: "Grade not found" });
+        continue;
+      }
+
+      // Validation checks
+      if (grade.priceType !== "negotiable") {
+        results.push({ gradeId, success: false, message: "Not negotiable" });
+        continue;
+      }
+
+      if (grade.status === "sold") {
+        results.push({ gradeId, success: false, message: "Already sold" });
+        continue;
+      }
+
+      if (quantity > grade.totalQty) {
+        results.push({
+          gradeId,
+          success: false,
+          message: "Exceeds available quantity",
+        });
+        continue;
+      }
+
+      if (grade.quantityType === "bulk" && quantity !== grade.totalQty) {
+        results.push({
+          gradeId,
+          success: false,
+          message: "Bulk requires full quantity",
+        });
+        continue;
+      }
+
+      // Add offer
+      grade.offers.push({
+        traderId,
+        traderName: traderName || "Unknown Trader",
+        offeredPrice,
+        quantity,
+        status: "pending",
+      });
+
+      results.push({ gradeId, success: true, message: "Offer added" });
+    }
+
+    // Save once after all offers are added
     await product.save();
 
+    const allSuccess = results.every((r) => r.success);
+
     res.status(200).json({
-      success: true,
-      message: 'Photos updated successfully',
-      data: product
+      success: allSuccess,
+      message: allSuccess
+        ? "All offers submitted successfully"
+        : "Some offers failed",
+      data: { product, results },
     });
   } catch (error) {
-    console.error('reuploadPhotos error:', error);
+    console.error("Error making batch offer:", error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };

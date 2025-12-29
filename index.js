@@ -149,6 +149,12 @@ app.use('/payment', require('./routes/traderpaymentroutes'));
 app.use("/api/market", require("./routes/marketRoutes"));
 app.use("/api/packaging", require("./routes/quantitytyperRoutes"));
 
+app.use("/api/commission", require("./routes/commissionRoutes"));
+app.use("/api/orders", require("./routes/orderRoutes"));
+app.use("/api/payment", require("./routes/paymentRoutes"));
+app.use("/api/transporter", require("./routes/transporterRoutes"));
+app.use("/api/admin", require("./routes/adminorderRoutes"));
+app.use("/api/orders/history", require("./routes/orderhistoryRoutes"));
 // =======================
 // Frontend (SPA)
 // =======================

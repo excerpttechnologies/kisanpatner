@@ -85,6 +85,8 @@ const gradePriceSchema = new mongoose.Schema({
     default: 'available'
   },
   // ADD THIS - Array to track all purchases
+// Updated purchaseHistory schema in product.js
+
 purchaseHistory: [{
   traderId: String,
   traderName: String,
@@ -107,7 +109,16 @@ purchaseHistory: [{
   },
   razorpayPaymentId: String,
   razorpayOrderId: String,
-   transporter: transporterInfoSchema,
+  transporter: transporterInfoSchema,
+  // 🔥 ADD THESE NEW FIELDS
+  orderCreated: {
+    type: Boolean,
+    default: false
+  },
+  orderId: {
+    type: String,
+    default: null
+  }
 }],
 
   offers: [offerSchema]
@@ -146,7 +157,7 @@ const productSchema = new mongoose.Schema({
   },
   packagingType: {
     type: String,
-    enum: ['KGs', 'box', 'crate', 'bunches', 'bag', 'sack', 'quanttal', 'ton'],
+   // enum: ['KGs', 'box', 'crate', 'bunches', 'bag', 'sack', 'quanttal', 'ton'],
     required: true
   },
   packageMeasurement: {

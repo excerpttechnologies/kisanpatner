@@ -7,7 +7,8 @@ router.get("/orders", adminOrderController.getAllOrdersForAdmin);
 
 // Get single order details
 router.get("/orders/:orderId", adminOrderController.getOrderDetails);
-
+router.get('/orders/:orderId/details', adminOrderController.getOrderDetails);
+router.patch('/orders/:orderId/update', adminOrderController.updateOrderDetails);
 // Confirm transportation and goods
 router.post(
   "/orders/:orderId/confirm-transportation",

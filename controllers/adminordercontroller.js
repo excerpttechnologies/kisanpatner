@@ -4,7 +4,7 @@ const Product = require("../models/product");
 // Try to load Market model
 let Market;
 try {
-  Market = require("../models/market");
+  Market = require("../models/Market");
 } catch (error) {
   console.warn("Market model not found");
   Market = null;
@@ -98,73 +98,73 @@ exports.getAllOrdersForAdmin = async (req, res) => {
 };
 
 // Get single order details
-exports.getOrderDetails = async (req, res) => {
-  try {
-    const { orderId } = req.params;
+// exports.getOrderDetails = async (req, res) => {
+//   try {
+//     const { orderId } = req.params;
 
-    const order = await Order.findOne({ orderId });
+//     const order = await Order.findOne({ orderId });
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
+//     if (!order) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Order not found",
+//       });
+//     }
 
-    // Enrich with product details
-    const enrichedProductItems = await Promise.all(
-      order.productItems.map(async (item) => {
-        const product = await Product.findOne({
-          productId: item.productId,
-        })
-          .populate("categoryId", "categoryName")
-          .populate("subCategoryId", "subCategoryName");
+//     // Enrich with product details
+//     const enrichedProductItems = await Promise.all(
+//       order.productItems.map(async (item) => {
+//         const product = await Product.findOne({
+//           productId: item.productId,
+//         })
+//           .populate("categoryId", "categoryName")
+//           .populate("subCategoryId", "subCategoryName");
 
-        let marketDetails = null;
-        if (Market && product && product.nearestMarket) {
-          try {
-            marketDetails = await Market.findOne({
-              marketName: product.nearestMarket,
-            });
-          } catch (error) {
-            console.error("Error fetching market details:", error);
-          }
-        }
+//         let marketDetails = null;
+//         if (Market && product && product.nearestMarket) {
+//           try {
+//             marketDetails = await Market.findOne({
+//               marketName: product.nearestMarket,
+//             });
+//           } catch (error) {
+//             console.error("Error fetching market details:", error);
+//           }
+//         }
 
-        return {
-          ...item.toObject(),
-          productName: product ? product.cropBriefDetails : "Unknown",
-          categoryName: product?.categoryId?.categoryName || "N/A",
-          nearestMarket: product?.nearestMarket || "N/A",
-          marketDetails: marketDetails
-            ? {
-                marketName: marketDetails.marketName,
-                pincode: marketDetails.pincode,
-                district: marketDetails.district,
-                state: marketDetails.state,
-                exactAddress: marketDetails.exactAddress,
-              }
-            : null,
-        };
-      })
-    );
+//         return {
+//           ...item.toObject(),
+//           productName: product ? product.cropBriefDetails : "Unknown",
+//           categoryName: product?.categoryId?.categoryName || "N/A",
+//           nearestMarket: product?.nearestMarket || "N/A",
+//           marketDetails: marketDetails
+//             ? {
+//                 marketName: marketDetails.marketName,
+//                 pincode: marketDetails.pincode,
+//                 district: marketDetails.district,
+//                 state: marketDetails.state,
+//                 exactAddress: marketDetails.exactAddress,
+//               }
+//             : null,
+//         };
+//       })
+//     );
 
-    res.status(200).json({
-      success: true,
-      data: {
-        ...order.toObject(),
-        productItems: enrichedProductItems,
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching order details:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch order details",
-      error: error.message,
-    });
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       data: {
+//         ...order.toObject(),
+//         productItems: enrichedProductItems,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error fetching order details:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch order details",
+//       error: error.message,
+//     });
+//   }
+// };
 
 // Confirm transportation and goods
 exports.confirmTransportation = async (req, res) => {
@@ -314,4 +314,146 @@ exports.updateTransportationVerification = async (req, res) => {
   }
 };
 
+
+
+
+
+
+// Get single order details with product grades
+exports.getOrderDetails = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    const order = await Order.findOne({ orderId });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Fetch product details with all grades for each product item
+    const productItemsWithGrades = await Promise.all(
+      order.productItems.map(async (item) => {
+        const product = await Product.findOne({ productId: item.productId });
+        
+        return {
+          ...item.toObject(),
+          availableGrades: product ? product.gradePrices.map(gp => ({
+            grade: gp.grade,
+            pricePerUnit: gp.pricePerUnit,
+            availableQty: gp.totalQty
+          })) : []
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...order.toObject(),
+        productItems: productItemsWithGrades
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order details'
+    });
+  }
+};
+
+// Update order with new grade and fees
+exports.updateOrderDetails = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const {
+      productItems, // Array with updated grades, quantities, prices
+      farmerLabourFee,
+      traderLabourFee,
+      farmerTransportFee,
+      traderTransportFee,
+      advanceAmount
+    } = req.body;
+
+    const order = await Order.findOne({ orderId });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Calculate totals
+    let productTotal = 0;
+    
+    // Update product items
+    order.productItems = productItems.map(item => {
+      const itemTotal = item.pricePerUnit * item.quantity;
+      productTotal += itemTotal;
+      
+      return {
+        ...item,
+        totalAmount: itemTotal
+      };
+    });
+
+    // Calculate Farmer Payment (Product Total - Labour - Transport)
+    const farmerTotal = productTotal - (farmerLabourFee || 0) - (farmerTransportFee || 0);
+    const farmerRemaining = farmerTotal - (advanceAmount || 0);
+
+    // Calculate Trader Payment (Product Total + Labour + Transport)
+    const traderTotal = productTotal + (traderLabourFee || 0) + (traderTransportFee || 0);
+
+    // Update adminToFarmerPayment
+    order.adminToFarmerPayment = {
+      totalAmount: farmerTotal,
+      paidAmount: advanceAmount || 0,
+      remainingAmount: farmerRemaining,
+      paymentStatus: farmerRemaining === 0 ? 'paid' : (advanceAmount > 0 ? 'partial' : 'pending'),
+      paymentHistory: advanceAmount > 0 ? [{
+        amount: advanceAmount,
+        paidDate: new Date(),
+        paymentType: 'advance'
+      }] : [],
+      fees: {
+        labourFee: farmerLabourFee || 0,
+        transportFee: farmerTransportFee || 0,
+        advanceAmount: advanceAmount || 0
+      }
+    };
+
+    // Update traderToAdminPayment
+    order.traderToAdminPayment = {
+      totalAmount: traderTotal,
+    
+      remainingAmount: traderTotal,
+      paymentStatus: 'pending',
+      paymentHistory: [],
+      fees: {
+        labourFee: traderLabourFee || 0,
+        transportFee: traderTransportFee || 0
+      }
+    };
+
+    order.updatedAt = new Date();
+    
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Order updated successfully',
+      data: order
+    });
+  } catch (error) {
+    console.error('Error updating order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating order'
+    });
+  }
+};
 module.exports = exports;

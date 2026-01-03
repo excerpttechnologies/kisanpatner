@@ -33,7 +33,7 @@ const upload = multer({
 });
 
 // Routes
-router.post('/add', upload.array('photos', 10), productController.addProduct);
+router.post('/add', upload.any(), productController.addProduct);
 router.get('/all', productController.getAllProducts);
 router.get('/:id', productController.getProductById);
 // routes/productRoutes.js

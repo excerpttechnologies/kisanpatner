@@ -79,6 +79,9 @@ const gradePriceSchema = new mongoose.Schema({
     enum: ['fixed', 'negotiable'],
     required: true
   },
+   gradePhotos: [{
+    type: String // Store file paths
+  }],
   status: {
     type: String,
     enum: ['available', 'partially_sold', 'sold'],

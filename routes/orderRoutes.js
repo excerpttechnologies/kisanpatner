@@ -28,7 +28,65 @@
 const express = require("express");
 const router = express.Router();
 const orderController = require("../controllers/ordercontroller");
+const Order = require("../models/order");
+// Get pending orders for farmer (trader accepted, farmer not accepted)
+// router.get('/farmer-pending/:farmerId', async (req, res) => {
+//   try {
+//     const { farmerId } = req.params;
+    
+//     const pendingOrders = await Order.find({
+//       farmerId: farmerId,
+//       traderAcceptedStatus: true,
+//       farmerAcceptedStatus: false
+//     }).sort({ createdAt: -1 });
+    
+//     res.json({
+//       success: true,
+//       orders: pendingOrders
+//     });
+//   } catch (error) {
+//     console.error('Error fetching pending orders:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to fetch pending orders'
+//     });
+//   }
+// });
 
+router.get('/farmer-pending/:farmerId', async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+    
+    // Get existing pending orders
+    const pendingOrders = await Order.find({
+      farmerId: farmerId,
+      traderAcceptedStatus: true,
+      farmerAcceptedStatus: false
+    }).sort({ createdAt: -1 });
+    
+    // 🔥 GET PRODUCTS WITH PENDING PURCHASE HISTORY
+    const Product = require('../models/product');
+    
+    const productsWithPendingPurchases = await Product.find({
+      farmerId: farmerId,
+      'gradePrices.purchaseHistory.orderCreated': false
+    })
+    .populate('categoryId')
+    .populate('subCategoryId');
+    
+    res.json({
+      success: true,
+      orders: pendingOrders,
+      pendingPurchases: productsWithPendingPurchases // 🔥 NEW FIELD
+    });
+  } catch (error) {
+    console.error('Error fetching pending orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending orders'
+    });
+  }
+});
 // Create new order (Trader side)
 router.post("/create", orderController.createOrder);
 

@@ -98,12 +98,12 @@ exports.addProduct = async (req, res) => {
       !cropBriefDetails ||
       !farmingType ||
       !typeOfSeeds ||
-      !packagingType ||
-      !packageMeasurement ||
+      //!packagingType ||
+     // !packageMeasurement ||
       packageMeasurement.trim() === "" ||
       !deliveryDate ||
       !deliveryTime ||
-      !nearestMarket ||
+     // !nearestMarket ||
       !farmerId
     ) {
       return res.status(400).json({
@@ -113,19 +113,26 @@ exports.addProduct = async (req, res) => {
     }
 
     // Handle file uploads
-    const cropPhotos = req.files ? req.files.map((file) => file.path) : [];
+    const cropPhotos = req.files
+      ?.filter(file => file.fieldname === 'photos')
+      .map(file => file.path) || [];
 
     // Parse gradePrices
-    const parsedGradePrices =
-      typeof gradePrices === "string" ? JSON.parse(gradePrices) : gradePrices;
+    const parsedGradePrices = typeof gradePrices === "string" 
+      ? JSON.parse(gradePrices) 
+      : gradePrices;
 
-    if (!parsedGradePrices || !parsedGradePrices.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Grade prices are required",
-      });
-    }
-
+    // ADD THIS - Assign photos to respective grades
+    const gradesWithPhotos = parsedGradePrices.map(grade => {
+      const gradePhotos = req.files
+        ?.filter(file => file.fieldname === `gradePhotos_${grade.grade}`)
+        .map(file => file.path) || [];
+      
+      return {
+        ...grade,
+        gradePhotos: gradePhotos
+      };
+    });
     // Parse farmLocation
     const parsedFarmLocation =
       typeof farmLocation === "string"
@@ -146,8 +153,9 @@ exports.addProduct = async (req, res) => {
       deliveryTime,
       nearestMarket,
       farmLocation: parsedFarmLocation,
-      gradePrices: parsedGradePrices,
+      gradePrices: gradesWithPhotos,
       cropPhotos,
+   
       sellerId,
     });
 

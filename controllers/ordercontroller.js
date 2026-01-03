@@ -635,6 +635,95 @@ exports.createOrder = async (req, res) => {
   }
 };
 // Farmer accepts order and adds admin to farmer payment
+// exports.farmerAcceptOrder = async (req, res) => {
+//   try {
+//     const {
+//       farmerId,
+//       traderId,
+//       productItems, // Array of { productId, grade, quantity }
+//       farmerName,
+//       farmerMobile,
+//       farmerEmail,
+//       totalFarmerAmount, // Net amount farmer will receive (after commission deduction)
+//       commissionRate,
+//     } = req.body;
+
+//     // Validate input
+//     if (!farmerId || !traderId || !productItems || productItems.length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Farmer ID, Trader ID and product items are required",
+//       });
+//     }
+
+//     // Find matching order
+//     // Match by: farmerId, traderId, and product details (productId + grade)
+//     const order = await Order.findOne({
+//       farmerId: farmerId,
+//       traderId: traderId,
+//       farmerAcceptedStatus: false, // Only update if not already accepted
+//     });
+
+//     if (!order) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Order not found or already accepted",
+//       });
+//     }
+
+//     // Verify product items match
+//     const orderProductMatches = productItems.every((reqItem) => {
+//       return order.productItems.some(
+//         (orderItem) =>
+//           orderItem.productId === reqItem.productId &&
+//           orderItem.grade === reqItem.grade
+//       );
+//     });
+
+//     if (!orderProductMatches) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Product items do not match the order",
+//       });
+//     }
+
+//     // Update farmer details
+//     order.farmerName = farmerName || order.farmerName;
+//     order.farmerMobile = farmerMobile || order.farmerMobile;
+//     order.farmerEmail = farmerEmail || order.farmerEmail;
+
+//     // Set farmer accepted status to true
+//     order.farmerAcceptedStatus = true;
+
+//     // Add adminToFarmerPayment
+//     order.adminToFarmerPayment = {
+//       totalAmount: totalFarmerAmount,
+//       paidAmount: 0,
+//       remainingAmount: totalFarmerAmount,
+//       paymentStatus: "pending",
+//       paymentHistory: [],
+//     };
+
+//     // Update order status
+//     order.orderStatus = "processing";
+//     order.updatedAt = Date.now();
+
+//     await order.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Order accepted by farmer successfully",
+//       data: order,
+//     });
+//   } catch (error) {
+//     console.error("Error accepting order:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to accept order",
+//       error: error.message,
+//     });
+//   }
+// };
 exports.farmerAcceptOrder = async (req, res) => {
   try {
     const {
@@ -646,7 +735,11 @@ exports.farmerAcceptOrder = async (req, res) => {
       farmerEmail,
       totalFarmerAmount, // Net amount farmer will receive (after commission deduction)
       commissionRate,
+      purchaseHistoryId, // NEW: ID of purchase history to mark as orderCreated
+      productId,         // NEW: Product MongoDB _id
+      gradeId            // NEW: Grade _id
     } = req.body;
+    console.log("farmerAcceptOrder", req.body);
 
     // Validate input
     if (!farmerId || !traderId || !productItems || productItems.length === 0) {
@@ -656,34 +749,21 @@ exports.farmerAcceptOrder = async (req, res) => {
       });
     }
 
-    // Find matching order
-    // Match by: farmerId, traderId, and product details (productId + grade)
+    // 🔥 FIXED: Find order that contains this specific product
     const order = await Order.findOne({
       farmerId: farmerId,
       traderId: traderId,
       farmerAcceptedStatus: false, // Only update if not already accepted
+      'productItems.productId': productItems[0].productId,
+      'productItems.grade': productItems[0].grade
     });
+
+    console.log("order found:", order);
 
     if (!order) {
       return res.status(404).json({
         success: false,
         message: "Order not found or already accepted",
-      });
-    }
-
-    // Verify product items match
-    const orderProductMatches = productItems.every((reqItem) => {
-      return order.productItems.some(
-        (orderItem) =>
-          orderItem.productId === reqItem.productId &&
-          orderItem.grade === reqItem.grade
-      );
-    });
-
-    if (!orderProductMatches) {
-      return res.status(400).json({
-        success: false,
-        message: "Product items do not match the order",
       });
     }
 
@@ -710,6 +790,37 @@ exports.farmerAcceptOrder = async (req, res) => {
 
     await order.save();
 
+    // 🔥 NEW: Mark purchase history as orderCreated = true (if provided)
+    if (purchaseHistoryId && productId && gradeId) {
+      const Product = require('../models/product');
+      
+      await Product.updateOne(
+        { 
+          _id: productId,
+          'gradePrices._id': gradeId
+        },
+        { 
+          $set: { 
+            'gradePrices.$[grade].purchaseHistory.$[purchase].orderCreated': true,
+            'gradePrices.$[grade].purchaseHistory.$[purchase].orderId': order.orderId
+          }
+        },
+        {
+          arrayFilters: [
+            { 'grade._id': gradeId },
+            { 'purchase._id': purchaseHistoryId }
+          ]
+        }
+      );
+
+      console.log('✅ Purchase history marked as orderCreated:', {
+        productId,
+        gradeId,
+        purchaseHistoryId,
+        orderId: order.orderId
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Order accepted by farmer successfully",
@@ -724,7 +835,6 @@ exports.farmerAcceptOrder = async (req, res) => {
     });
   }
 };
-
 // Get farmer's orders
 exports.getFarmerOrders = async (req, res) => {
   try {

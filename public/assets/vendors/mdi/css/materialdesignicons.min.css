@@ -1,0 +1,148 @@
+.invoice-list-container {
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Calibri', sans-serif;
+}
+
+.invoice-list-container h2 {
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.loading, .error, .no-invoices {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+}
+
+.error {
+  color: #d32f2f;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 4px;
+}
+
+.no-invoices {
+  color: #666;
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.table-container {
+  overflow-x: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background-color: white;
+}
+
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.invoice-table th {
+  background-color: #f8f9fa;
+  color: #333;
+  font-weight: 600;
+  padding: 15px 10px;
+  text-align: left;
+  border-bottom: 2px solid #dee2e6;
+  font-size: 14px;
+}
+
+.invoice-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #dee2e6;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.invoice-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.invoice-table tr:last-child td {
+  border-bottom: none;
+}
+
+.status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status.pending {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status.paid {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.download-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.download-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.download-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.download-btn:disabled:hover {
+  background-color: #6c757d;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .invoice-list-container {
+    padding: 10px;
+  }
+  
+  .invoice-table th,
+  .invoice-table td {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+  
+  .download-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .invoice-table {
+    font-size: 11px;
+  }
+  
+  .invoice-table th,
+  .invoice-table td {
+    padding: 6px 4px;
+  }
+  
+  .download-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}

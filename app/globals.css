@@ -305,21 +305,45 @@ a {
 }
 
 .button-primary-1 span {
-    z-index: 11;
+    z-index: 110;
     color: #0554f2;
+    
+}
+
+.button-primary-1 {
+    position: relative;
+    overflow: hidden; /* usually needed for effects like this */
 }
 
 .button-primary-1::after {
     content: "";
-    width: 75px;
-    height: 175px;
+    width: 60px;
+    height: 305px;
     display: block;
-    top: -110px;
-    left: -30px;
+    top: -10px;
+    left: -100px;
     position: absolute;
     background: #0554f2;
-    transform: rotate(45deg);
-    z-index: 1;
+    transform: skewX(-30deg);
+    z-index: 0;
+    transition: width 0.3s ease; /* smooth animation */
+}
+
+/* Hover the button, change the ::after */
+.button-primary-1:hover::after {
+    width: 1000px;
+    top: 0;
+}
+
+.button-primary-1:hover span {
+    z-index: 110;
+    color: #fafbfc;
+}
+
+ span {
+    z-index: 110;
+    color: #0554f2;
+    
 }
 
 @media (max-width: 767px) {
@@ -347,7 +371,7 @@ a {
 }
 
 .button-secondary-1 span {
-    z-index: 11;
+    z-index: 110;
     color: #ffaa17;
 }
 
@@ -496,9 +520,9 @@ a {
 
 #footer .footer-body .about-company {
     margin-top: -100px;
-    background: white;
+    background-color: white;
     border-radius: 5px;
-    max-width: 350px;
+    max-width: 100px;
     width: 100%;
     overflow: hidden;
 }
@@ -508,11 +532,13 @@ a {
     padding: 11px 59px;
     position: relative;
     margin-bottom: 47px;
+
 }
 
 #footer .footer-body .about-company .logo-wrapper img {
     /* max-width: 165px; */
     width: 100%;
+   
 }
 
 #footer .footer-body .about-company .logo-wrapper:after {
@@ -1261,6 +1287,7 @@ button {
         flex: 0 0 85%;
         scroll-snap-align: start;
         min-height: 150px;
+        
     }
     
     /* CLS FIX: Don't override height:auto globally - breaks explicit dimensions */
@@ -1343,7 +1370,8 @@ button {
 }
 
 .homecard-card-image {
-  height: 380px;
+  height: 400px;
+  width: 35rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4430,7 +4458,6 @@ ul li {
     left: 0;
     right: 0;
     background: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     max-height: 80vh;
     overflow-y: auto;
@@ -4716,6 +4743,7 @@ ul li {
   z-index: 1000;
   min-height: 80px;
   height: 80px;
+ 
 }
 
 /* Topheader - reserve space to prevent layout shift */
@@ -5335,7 +5363,7 @@ body {
 
 #navbar-1 {
     background-color: #0554f2;
-    width: 99vw;
+    width: 100vw;
     box-shadow: 50px 0px 25px rgba(0, 0, 0, 0);
     position: relative;
     height: 90px;
@@ -5705,6 +5733,7 @@ body {
     overflow: hidden;
 }
 
+
 /* CLS guard: stable hero slider height - REMOVE padding-top that causes content shift */
 #hero .hero-1-slide .slide-card {
     min-height: 88vh !important;
@@ -5727,6 +5756,8 @@ body {
     width: 100%;
     min-height: 88vh;
     height: 88vh;
+    background: transparent;
+    z-index: 100;
 }
 
 .slide-image {
@@ -7389,4 +7420,106 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* //////my change ///////////////////////////////////////////// */
+
+/* Add to your global CSS file */
+/* Prevent horizontal scrolling and ensure full height */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    height: 100% !important;
+    position: relative;
+  }
+  
+  #__next {
+    overflow-x: hidden;
+  }
+  
+  /* Ensure slider takes full viewport */
+  .slider-container,
+  #hero,
+  .hero-1-slide,
+  .slide-wrapper,
+  .slide-image {
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+  }
+}
+
+/* Smooth transitions */
+.slide-image {
+  transition: opacity 0.5s ease-in-out !important;
+}
+
+/* Prevent FOUC (Flash of Unstyled Content) */
+.slider-container {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.slider-container.loading {
+  opacity: 0;
+}
+
+.slide-box{
+    position: absolute;
+    top: -45%;
+    left:-20%;
+    bottom: 0;
+    right: 0;
+    height:300%;
+    width:120%;
+    z-index: 1;
+    background-color: transparent;
+    display: flex;
+    rotate: 20deg;
+   
+
+}
+.slide-box > div{
+ width: 50%;
+ height: 300%;
+ background-color: rgba(23, 44, 124, 0.5) ;
+ position: relative;
+}
+.box1 {
+  animation: slideIn 1s ease forwards;
+  animation-delay: .5s;
+}
+
+.box2 {
+  animation: slideIn2 1s ease forwards;
+  animation-delay: .5s;
+}
+
+/* Hide slide-box on small devices */
+@media (max-width: 800px) {
+  .slide-box {
+    display: none;
+  }
+}
+
+
+@keyframes slideIn {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-70%);
+    }
+}
+
+@keyframes slideIn2 {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(70%);
+    }
 }

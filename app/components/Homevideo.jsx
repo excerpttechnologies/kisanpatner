@@ -306,6 +306,7 @@ const Contact = () => {
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             height: '300px',
+            
             width: '100%'
           }}
         ></div>

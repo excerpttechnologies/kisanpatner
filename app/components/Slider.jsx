@@ -1,490 +1,11 @@
-// 'use client';
-
-// // import React, { useState, useEffect } from 'react';
-// // import './Slider.css'
-
-// // function Slider() {
-// //   const slides = [
-// //     {
-// //       image: '/images/home1/slider/s1.webp',
-// //       caption: 'Breaking Boundaries, One Innovation At a Time.',
-// //     },
-// //     {
-// //       image: '/images/home1/slider/s2.webp',
-// //       caption: 'Where Ideas Ignite And Dreams Take Flight',
-// //     },
-// //     {
-// //       image: '/images/home1/slider/s3.webp',
-// //       caption: 'A Triumphant Three Years Of Software ',
-// //     },
-// //     {
-// //       image: '/Trainingimage/img.webp',
-// //       caption: '  IT Corporate Training ',
-// //     },
-// //     {
-// //       image: '/Trainingimage/sm.webp',
-// //       caption: '  ',
-// //     },
-// //   ];
-
-// //   const [currentSlide, setCurrentSlide] = useState(0);
-
-// //   useEffect(() => {
-// //     const intervalId = setInterval(() => {
-// //       setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length);
-// //     }, 4000); 
-
-// //     return () => clearInterval(intervalId);
-// //   }, [slides.length]);
-
-// //   return (
-// //     <div>
-// //       <section id="hero">
-// //         <div className="hero-1-slide" style={{ height: '100px' }}>
-// //           <div className="slide-wrapper" >
-// //             {slides.map((slide, index) => (
-// //               <div
-// //   key={index}
-// //   className="slider-image slide-card"
-// //   style={{
-// //     backgroundImage: `linear-gradient(0deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
-// //                       url(${slide.image})`,
-// //     display: index === currentSlide ? 'block' : 'none',
-// //     backgroundSize: 'cover',
-// //     backgroundRepeat: 'no-repeat',
-// //     height: '600px',
-// //     width: '100%',
-// //     animation: 'slideAnimation 5s forwards',
-// //     animationDirection: 'alternate', 
-// //   }}
-// // >
-
-// //                 <div className="slide__card--wrapper">
-
-// //                   <h2 className="heading-2 mb-25" style={{ animation: 'textAnimation 1s forwards',color:"white" }}>{slide.caption}</h2>
-// //                   <h1 style={{ animation: 'textAnimation 1s forwards' }}>IT Solutions</h1>
-// //                   <div className="heading-7 mb-30" style={{ animation: 'textAnimation 1s forwards',color:"white" }}>
-// //                     Innovative Solutions, Seamless Experiences.
-// //                   </div>
-// //                   <a href="/Excerptitservices" className="button-primary-1" style={{ animation: 'textAnimation 1s forwards' }}>
-// //                     <span>Read More</span>
-// //                   </a>
-// //                 </div>
-// //               </div>
-// //             ))}
-// //           </div>
-// //           <img className="curve-overlay" style={{ marginTop: '100px', height: "60px" }} src="/images/home1/c1.webp" alt="" />
-// //           <div className="overlay-wrapper">
-// //             <div className="left-overlay"></div>
-// //             <div className="right-overlay"></div>
-// //           </div>
-// //         </div>
-
-// //         <div className="hero-contact d-flex">
-// //           <ul className="d-flex phone-email">
-// //             <li className="paragraph-3">
-// //               <span>
-// //                 <i className="fa-solid fa-envelope"></i>
-// //               </span>
-// //               <a href="mailto:info@excerptech.com">info@excerptech.com</a>
-// //             </li>
-// //             <li className="paragraph-3">
-// //               <span>
-// //                 <i className="fa-solid fa-phone"></i> 
-// //                 <a href='tel:+916364657660'> +91 63646 57660</a>
-// //               </span>
-// //             </li>
-// //             <li className="paragraph-3" style={{ marginRight: "-42px" }}></li>
-// //           </ul>
-// //           <ul className="d-flex social">
-// //             <li>
-// //               <a href="https://www.facebook.com/Excerptechnology/" target="_blank">
-// //                 <i className="fa-brands fa-facebook-f"></i>
-// //               </a>
-// //             </li>
-// //             <li>
-// //               <a href="https://www.instagram.com/excerpt_technologies/?igsh=Z3k5OXozNDIzZHps" target="_blank">
-// //                 <i className="fa-brands fa-instagram"></i>
-// //               </a>
-// //             </li>
-// //             <li>
-// //               <a href="https://www.linkedin.com/company/excerptech" target="_blank">
-// //                 <i className="fa-brands fa-linkedin-in"></i>
-// //               </a>
-// //             </li>
-// //           </ul>
-// //         </div>
-// //       </section>
-// //     </div>
-// //   );
-// // }
-
-// // export default Slider;
 
 
-// // import React, { useState, useEffect } from 'react';
-// // import { Link } from 'next/link';
-// // import './Slider.css';
-// // import { memo } from 'react'
 
-// // function Slider() {
-// //   const slides = [
-// //     {
-// //       image: '/images/home1/slider/s1.webp',
-// //       caption: 'Breaking Boundaries, One Innovation At a Time.',
-// //     },
-// //     {
-// //       image: '/images/home1/slider/s2.webp',
-// //       caption: 'Where Ideas Ignite And Dreams Take Flight',
-// //     },
-// //     {
-// //       image: '/images/home1/slider/s3.webp',
-// //       caption: 'A Triumphant Three Years Of Software',
-// //     },
-// //     {
-// //       image: '/Trainingimage/img.webp',
-// //       caption: 'IT Corporate Training',
-// //     },
-// //     {
-// //       image: '/Trainingimage/sm.webp',
-// //       caption: '',
-// //     },
-// //   ];
 
-// //   const [currentSlide, setCurrentSlide] = useState(0);
 
-// //   useEffect(() => {
-// //     const intervalId = setInterval(() => {
-// //       setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length);
-// //     }, 4000);
 
-// //     return () => clearInterval(intervalId);
-// //   }, [slides.length]);
 
-// //   const getSlideHeightClass = () => {
-// //     if (window.innerWidth <= 480) return 'height-200';
-// //     if (window.innerWidth <= 768) return 'height-300';
-// //     return 'height-600';
-// //   };
 
-// //   return (
-// //     <div>
-// //       <section id="hero">
-// //         <div className="hero-1-slide">
-// //           <div className="slide-wrapper">
-// //             {slides.map((slide, index) => (
-// //               <div
-// //                 key={index}
-// //                 className={`slide-image slide-card ${getSlideHeightClass()}`}
-// //                 style={{
-// //                   backgroundImage: `linear-gradient(0deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url(${slide.image})`,
-// //                   display: index === currentSlide ? 'block' : 'none',
-// //                 }}
-// //               >
-// //                 <div className="slide__card--wrapper">
-// //                   <h2 className="heading-2 mb-25" style={{ color: 'white' }}>{slide.caption}</h2>
-// //                   <h1>IT Solutions</h1>
-// //                   <div className="heading-7 mb-30" style={{ color: 'white' }}>
-// //                     Innovative Solutions, Seamless Experiences.
-// //                   </div>
-// //                   {slide.caption === 'IT Corporate Training' ? (
-// //                     <Link href="/Excerptitservices" className="button-primary-1">
-// //                       <span>Read More</span>
-// //                     </Link>
-// //                   ) : (
-// //                     <Link href="/portfolio" className="button-primary-1">
-// //                       <span>Read More</span>
-// //                     </Link>
-// //                   )}
-// //                 </div>
-// //               </div>
-// //             ))}
-// //           </div>
-// //           <img className="curve-overlay" style={{ marginTop: '100px', height: '60px' }} src="/images/home1/c1.webp" alt="" />
-// //           <div className="overlay-wrapper">
-// //             <div className="left-overlay"></div>
-// //             <div className="right-overlay"></div>
-// //           </div>
-// //         </div>
-
-// //         <div className="hero-contact d-flex">
-// //           <ul className="d-flex phone-email">
-// //             <li className="paragraph-3">
-// //               <span>
-// //                 <i className="fa-solid fa-envelope"></i>
-// //               </span>
-// //               <a href="mailto:info@excerptech.com">info@excerptech.com</a>
-// //             </li>
-// //             <li className="paragraph-3">
-// //               <span>
-// //                 <i className="fa-solid fa-phone"></i>
-// //                 <a href="tel:+916364657660"> +91 63646 57660</a>
-// //               </span>
-// //             </li>
-// //           </ul>
-// //           <ul className="d-flex social">
-// //             <li>
-// //               <a href="https://www.facebook.com/Excerptechnology/" target="_blank" rel="noopener noreferrer">
-// //                 <i className="fa-brands fa-facebook-f"></i>
-// //               </a>
-// //             </li>
-// //             <li>
-// //               <a href="https://www.instagram.com/excerpt_technologies/?igsh=Z3k5OXozNDIzZHps" target="_blank" rel="noopener noreferrer">
-// //                 <i className="fa-brands fa-instagram"></i>
-// //               </a>
-// //             </li>
-// //             <li>
-// //               <a href="https://www.linkedin.com/company/excerptech" target="_blank" rel="noopener noreferrer">
-// //                 <i className="fa-brands fa-linkedin-in"></i>
-// //               </a>
-// //             </li>
-// //           </ul>
-// //         </div>
-// //       </section>
-// //     </div>
-// //   );
-// // }
-
-// // export default Slider;
-
-// // import React, { useState, useEffect, useCallback, useMemo } from 'react';
-// // import { Link } from 'next/link';
-// // import './Slider.css';
-
-// // // Preload critical images
-// // const preloadImages = (imageSrcs) => {
-// //   imageSrcs.forEach(src => {
-// //     const img = new Image();
-// //     img.src = src;
-// //   });
-// // };
-
-// // const Slider = React.memo(() => {
-// //   const slides = useMemo(() => [
-// //     {
-// //       image: '/images/home1/slider/s1.webp',
-// //       caption: 'Breaking Boundaries, One Innovation At a Time.',
-// //     },
-// //     {
-// //       image: '/images/home1/slider/s2.webp',
-// //       caption: 'Where Ideas Ignite And Dreams Take Flight',
-// //     },
-// //     {
-// //       image: '/images/home1/slider/s3.webp',
-// //       caption: 'A Triumphant Three Years Of Software',
-// //     },
-// //     {
-// //       image: '/Trainingimage/img.webp',
-// //       caption: 'IT Corporate Training',
-// //     },
-// //     {
-// //       image: '/Trainingimage/sm.webp',
-// //       caption: '',
-// //     },
-// //   ], []);
-
-// //   const [currentSlide, setCurrentSlide] = useState(0);
-// //   const [isLoaded, setIsLoaded] = useState(false);
-// //   const [screenSize, setScreenSize] = useState('desktop');
-
-// //   // Optimized screen size detection
-// //   const updateScreenSize = useCallback(() => {
-// //     const width = window.innerWidth;
-// //     if (width <= 480) setScreenSize('mobile');
-// //     else if (width <= 768) setScreenSize('tablet');
-// //     else setScreenSize('desktop');
-// //   }, []);
-
-// //   // Get height class based on screen size
-// //   const getSlideHeightClass = useCallback(() => {
-// //     switch (screenSize) {
-// //       case 'mobile': return 'height-200';
-// //       case 'tablet': return 'height-300';
-// //       default: return 'height-600';
-// //     }
-// //   }, [screenSize]);
-
-// //   // Preload images and set up resize listener
-// //   useEffect(() => {
-// //     // Preload first image immediately, others after a delay
-// //     const firstImage = new Image();
-// //     firstImage.onload = () => setIsLoaded(true);
-// //     firstImage.src = slides[0].image;
-
-// //     // Preload remaining images after a short delay
-// //     setTimeout(() => {
-// //       preloadImages(slides.slice(1).map(slide => slide.image));
-// //     }, 100);
-
-// //     // Screen size listener with debounce
-// //     let resizeTimer;
-// //     const handleResize = () => {
-// //       clearTimeout(resizeTimer);
-// //       resizeTimer = setTimeout(updateScreenSize, 150);
-// //     };
-
-// //     updateScreenSize(); // Initial call
-// //     window.addEventListener('resize', handleResize);
-
-// //     return () => {
-// //       window.removeEventListener('resize', handleResize);
-// //       clearTimeout(resizeTimer);
-// //     };
-// //   }, [slides, updateScreenSize]);
-
-// //   // Auto-slide effect
-// //   useEffect(() => {
-// //     if (!isLoaded) return;
-
-// //     const intervalId = setInterval(() => {
-// //       setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length);
-// //     }, 4000);
-
-// //     return () => clearInterval(intervalId);
-// //   }, [slides.length, isLoaded]);
-
-// //   // Loading skeleton
-// //   if (!isLoaded) {
-// //     return (
-// //       <div className="slider-skeleton">
-// //         <div className={`slide-skeleton ${getSlideHeightClass()}`}>
-// //           <div className="skeleton-content">
-// //             <div className="skeleton-title"></div>
-// //             <div className="skeleton-subtitle"></div>
-// //             <div className="skeleton-button"></div>
-// //           </div>
-// //         </div>
-// //       </div>
-// //     );
-// //   }
-
-// //   return (
-// //     <div>
-// //       <section id="hero">
-// //         <div className="hero-1-slide">
-// //           <div className="slide-wrapper">
-// //             {slides.map((slide, index) => {
-// //               const isActive = index === currentSlide;
-// //               const isNext = index === (currentSlide + 1) % slides.length;
-
-// //               return (
-// //                 <div
-// //                   key={index}
-// //                   className={`slide-image slide-card ${getSlideHeightClass()}`}
-// //                   style={{
-// //                     backgroundImage: `linear-gradient(0deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url(${slide.image})`,
-// //                     display: isActive ? 'block' : 'none',
-// //                     // Preload next slide
-// //                     ...(isNext && { backgroundImage: `url(${slide.image})` }),
-// //                   }}
-// //                 >
-// //                   {isActive && (
-// //                     <div className="slide__card--wrapper">
-// //                       <h2 className="heading-2 mb-25" style={{ color: 'white' }}>
-// //                         {slide.caption}
-// //                       </h2>
-// //                       <h1>IT Solutions</h1>
-// //                       <div className="heading-7 mb-30" style={{ color: 'white' }}>
-// //                         Innovative Solutions, Seamless Experiences.
-// //                       </div>
-// //                       {slide.caption === 'IT Corporate Training' ? (
-// //                         <Link 
-// //                           href="/Excerptitservices" 
-// //                           className="button-primary-1"
-// //                           aria-label="Learn more about IT Corporate Training"
-// //                         >
-// //                           <span>Read More</span>
-// //                         </Link>
-// //                       ) : (
-// //                         <Link 
-// //                           href="/portfolio" 
-// //                           className="button-primary-1"
-// //                           aria-label="View our portfolio"
-// //                         >
-// //                           <span>Read More</span>
-// //                         </Link>
-// //                       )}
-// //                     </div>
-// //                   )}
-// //                 </div>
-// //               );
-// //             })}
-// //           </div>
-
-// //           {/* Optimized curve overlay with lazy loading */}
-// //           <img 
-// //             className="curve-overlay" 
-// //             style={{ marginTop: '100px', height: '60px' }} 
-// //             src="/images/home1/c1.webp" 
-// //             alt=""
-// //             loading="lazy"
-// //             decoding="async"
-// //           />
-
-// //           <div className="overlay-wrapper">
-// //             <div className="left-overlay"></div>
-// //             <div className="right-overlay"></div>
-// //           </div>
-// //         </div>
-
-// //         <div className="hero-contact d-flex">
-// //           <ul className="d-flex phone-email">
-// //             <li className="paragraph-3">
-// //               <span>
-// //                 <i className="fa-solid fa-envelope" aria-hidden="true"></i>
-// //               </span>
-// //               <a href="mailto:info@excerptech.com" aria-label="Email us">
-// //                 info@excerptech.com
-// //               </a>
-// //             </li>
-// //             <li className="paragraph-3">
-// //               <span>
-// //                 <i className="fa-solid fa-phone" aria-hidden="true"></i>
-// //                 <a href="tel:+916364657660" aria-label="Call us"> +91 63646 57660</a>
-// //               </span>
-// //             </li>
-// //           </ul>
-// //           <ul className="d-flex social">
-// //             <li>
-// //               <a 
-// //                 href="https://www.facebook.com/Excerptechnology/" 
-// //                 target="_blank" 
-// //                 rel="noopener noreferrer"
-// //                 aria-label="Visit our Facebook page"
-// //               >
-// //                 <i className="fa-brands fa-facebook-f" aria-hidden="true"></i>
-// //               </a>
-// //             </li>
-// //             <li>
-// //               <a 
-// //                 href="https://www.instagram.com/excerpt_technologies/?igsh=Z3k5OXozNDIzZHps" 
-// //                 target="_blank" 
-// //                 rel="noopener noreferrer"
-// //                 aria-label="Visit our Instagram page"
-// //               >
-// //                 <i className="fa-brands fa-instagram" aria-hidden="true"></i>
-// //               </a>
-// //             </li>
-// //             <li>
-// //               <a 
-// //                 href="https://www.linkedin.com/company/excerptech" 
-// //                 target="_blank" 
-// //                 rel="noopener noreferrer"
-// //                 aria-label="Visit our LinkedIn page"
-// //               >
-// //                 <i className="fa-brands fa-linkedin-in" aria-hidden="true"></i>
-// //               </a>
-// //             </li>
-// //           </ul>
-// //         </div>
-// //       </section>
-// //     </div>
-// //   );
-// // });
-
-// // Slider.displayName = 'Slider';
-
-// // export default Slider;
 // 'use client';
 
 // import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -986,9 +507,23 @@
 //           <picture>
 //             <img
 //               className="curve-overlay"
+//               style={{ 
+//                 position: 'absolute', /* CLS guard: absolute positioning doesn't affect layout */
+//                 bottom: '-10px', /* Use bottom instead of marginTop */
+//                 left: 0,
+//                 height: '60px', 
+//                 width: '100%',
+//                 minHeight: '60px',
+//                 display: 'block',
+//                 aspectRatio: '1920 / 60',
+//                 zIndex:100 /* CLS guard: Explicit aspect ratio */
+//               }}
 //               src="/images/home1/c1.webp"
 //               alt=""
 //               loading="lazy"
+//               decoding="async"
+//               width="1920"
+//               height="60"
 //             />
 //           </picture>
 
@@ -1061,6 +596,7 @@
 // Slider.displayName = 'Slider';
 
 // export default Slider;
+
 
 
 
@@ -1445,8 +981,10 @@ const Slider = React.memo(() => {
       `}</style>
 
       <section id="hero">
+        
         <div className="hero-1-slide">
           <div className="slide-wrapper">
+            
             {slides.map((slide, index) => {
               const isActive = index === currentSlide;
               // Always show first slide (index 0) when component mounts
@@ -1471,6 +1009,11 @@ const Slider = React.memo(() => {
                     <div className="gradient-bg" style={{ width: '100%', height: '100%' }} />
                   ) : (
                     <>
+                    <div className='slide-box'>
+                      <div className='box1'></div>
+                      <div className='box2'></div>
+                    </div>
+
                       <img
                         src={slide.image}
                         alt={slide.caption || 'Slider image'}

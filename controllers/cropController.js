@@ -2,9 +2,10 @@ const Crop = require('../models/Crop');
 
 const addCrop = async (req, res) => {
   try {
-    const { farmingType, seedType, acres, sowingDate, farmerId } = req.body;
+    console.log('Received addCrop request body:', req.body);
+    const { farmingType, seedType, acres, sowingDate, farmerId, category, subcategory } = req.body;
 
-    if (!farmingType || !seedType || !acres || !sowingDate || !farmerId) {
+    if (!farmingType || !seedType || !acres || !sowingDate || !farmerId || !category || !subcategory) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
@@ -13,7 +14,9 @@ const addCrop = async (req, res) => {
       seedType,
       acres: parseFloat(acres),
       sowingDate: new Date(sowingDate),
-      farmerId
+      farmerId,
+      category,
+      subcategory
     });
 
     await crop.save();

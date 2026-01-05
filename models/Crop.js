@@ -5,6 +5,14 @@ const cropSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  category: {
+    type: String,
+    required: true
+  },
+  subcategory: {
+    type: String,
+    required: true
+  },
   seedType: {
     type: String,
     required: true

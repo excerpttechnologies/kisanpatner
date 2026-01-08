@@ -300,6 +300,8 @@
 
 // module.exports = mongoose.model("Order", orderSchema);
 
+
+
 const mongoose = require("mongoose");
 
 const productItemSchema = new mongoose.Schema(
@@ -352,57 +354,6 @@ const paymentRecordSchema = new mongoose.Schema(
   { _id: true }
 );
 
-// const traderToAdminPaymentSchema = new mongoose.Schema(
-//   {
-//     totalAmount: {
-//       type: Number,
-//       required: true,
-//     },
-//     paidAmount: {
-//       type: Number,
-//       default: 0,
-//     },
-//     remainingAmount: {
-//       type: Number,
-//       required: true,
-//     },
-//     paymentStatus: {
-//       type: String,
-//       enum: ["pending", "partial", "paid"],
-//       default: "pending",
-//     },
-//     paymentHistory: [paymentRecordSchema],
-//   },
-//   { _id: false }
-// );
-
-// const adminToFarmerPaymentSchema = new mongoose.Schema(
-//   {
-//     totalAmount: {
-//       type: Number,
-//       required: true,
-//     },
-//     paidAmount: {
-//       type: Number,
-//       default: 0,
-//     },
-//     remainingAmount: {
-//       type: Number,
-//       required: true,
-//     },
-//     paymentStatus: {
-//       type: String,
-//       enum: ["pending", "partial", "paid"],
-//       default: "pending",
-//     },
-//     paymentHistory: [paymentRecordSchema],
-//   },
-//   { _id: false }
-// );
-
-// Transporter Details Schema with Verification Fields
-
-// Add to Order model
 const traderToAdminPaymentSchema = new mongoose.Schema(
   {
     totalAmount: {
@@ -423,10 +374,6 @@ const traderToAdminPaymentSchema = new mongoose.Schema(
       default: "pending",
     },
     paymentHistory: [paymentRecordSchema],
-    fees: {
-      labourFee: { type: Number, default: 0 },
-      transportFee: { type: Number, default: 0 }
-    }
   },
   { _id: false }
 );
@@ -451,15 +398,11 @@ const adminToFarmerPaymentSchema = new mongoose.Schema(
       default: "pending",
     },
     paymentHistory: [paymentRecordSchema],
-    fees: {
-      labourFee: { type: Number, default: 0 },
-      transportFee: { type: Number, default: 0 },
-      advanceAmount: { type: Number, default: 0 }
-    }
   },
   { _id: false }
 );
 
+// Transporter Details Schema with Verification Fields
 const transporterDetailsSchema = new mongoose.Schema(
   {
     transporterId: {
@@ -516,7 +459,7 @@ const transporterDetailsSchema = new mongoose.Schema(
 const orderSchema = new mongoose.Schema({
   orderId: {
     type: String,
-   // unique: true,
+    unique: true,
   },
   traderId: {
     type: String,
@@ -565,7 +508,37 @@ const orderSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+
+  nearestMarket: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Market",
+},
+
+
+adminPickupKey: { type: String },
+
+traderDeliveryKey: { type: String },
+
+deliveryStatus: {
+  type: String,
+  enum: ["pending", "in-transit", "delivered"],
+  default: "pending",
+},
+
+transporterStatus: {
+  type: String,
+  enum: ["pending", "accepted", "approved", "started", "completed"],
+  default: "pending",
+},
+
+transporterDetails: transporterDetailsSchema,
+
+
+
 });
+
+
+
 
 // Auto-generate orderId before saving
 orderSchema.pre("save", async function () {
@@ -578,8 +551,10 @@ orderSchema.pre("save", async function () {
   this.updatedAt = Date.now();
 });
 
+
+
 // Create indexes
-// orderSchema.index({ orderId: 1 });
+orderSchema.index({ orderId: 1 });
 orderSchema.index({ traderId: 1 });
 orderSchema.index({ farmerId: 1 });
 orderSchema.index({ orderStatus: 1 });

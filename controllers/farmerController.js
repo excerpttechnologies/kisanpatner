@@ -2,99 +2,7 @@ const Farmer = require('../models/Farmer');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 
-// // Register Farmer
-// exports.registerFarmer = async (req, res) => {
-//   try {
-//     const {
-//       personalInfo,
-//       farmLocation,
-//       farmLand,
-//       commodities,
-//       nearestMarkets,
-//       bankDetails,
-//       security,
-//       role
-//     } = req.body;
 
-//     // Parse JSON strings
-//     const parsedPersonalInfo = JSON.parse(personalInfo);
-//     const parsedFarmLocation = JSON.parse(farmLocation);
-//     const parsedFarmLand = JSON.parse(farmLand);
-//     const parsedCommodities = JSON.parse(commodities);
-//     const parsedNearestMarkets = JSON.parse(nearestMarkets);
-//     const parsedBankDetails = JSON.parse(bankDetails);
-//     const parsedSecurity = JSON.parse(security);
-
-//     // Check if farmer already exists
-//     const existingFarmer = await Farmer.findOne({ 
-//       'personalInfo.mobileNo': parsedPersonalInfo.mobileNo 
-//     });
-
-//     if (existingFarmer) {
-//       return res.status(400).json({
-//         success: false,
-//         message: 'Farmer with this mobile number already exists'
-//       });
-//     }
-
-//     // Hash MPIN
-//     const salt = await bcrypt.genSalt(10);
-//     const hashedMpin = await bcrypt.hash(parsedSecurity.mpin, salt);
-// const hashedPassword = await bcrypt.hash(parsedSecurity.password, salt);
-//     // Prepare document paths
-//     const documents = {};
-//     if (req.files) {
-//       if (req.files.panCard) {
-//         documents.panCard = `/uploads/${req.files.panCard[0].filename}`;
-//       }
-//       if (req.files.aadharFront) {
-//         documents.aadharFront = `/uploads/${req.files.aadharFront[0].filename}`;
-//       }
-//       if (req.files.aadharBack) {
-//         documents.aadharBack = `/uploads/${req.files.aadharBack[0].filename}`;
-//       }
-//       if (req.files.bankPassbook) {
-//         documents.bankPassbook = `/uploads/${req.files.bankPassbook[0].filename}`;
-//       }
-//     }
-
-//     // Create new farmer
-//     const newFarmer = new Farmer({
-//       personalInfo: parsedPersonalInfo,
-//       farmLocation: parsedFarmLocation,
-//       farmLand: parsedFarmLand,
-//       role: role,
-//       commodities: parsedCommodities,
-//       nearestMarkets: parsedNearestMarkets,
-//       bankDetails: parsedBankDetails,
-//       documents: documents,
-//       security: {
-//         referralCode: parsedSecurity.referralCode,
-//         mpin: hashedMpin,
-//         password: hashedPassword
-//       }
-//     });
-
-//     await newFarmer.save();
-
-//     res.status(201).json({
-//       success: true,
-//       message: 'Farmer registered successfully',
-//       data: {
-//         id: newFarmer._id,
-//         name: newFarmer.personalInfo.name,
-//         mobileNo: newFarmer.personalInfo.mobileNo
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Error in registerFarmer:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Internal server error',
-//       error: error.message
-//     });
-//   }
-// };
 
 
 const generateNextId = async (role) => {
@@ -282,39 +190,26 @@ exports.getFarmerById = async (req, res) => {
 
 // Get All Farmers
 exports.getAllFarmers = async (req, res) => {
-  console.log("Fetching all farmers");
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+    const { traderId, role } = req.query;
 
-    const farmers = await Farmer.find()
-      .populate('commodities')
-      .select('-security.mpin')
-      .skip(skip)
-      .limit(limit)
-      .sort({ registeredAt: -1 });
-    
-    const total = await Farmer.countDocuments();
+    let filter = {};
+    if (traderId) filter.traderId = traderId;
+    if (role) filter.role = role;
+
+    const farmers = await Farmer.find(filter)
+      .select("-security.mpin -security.password");
 
     res.status(200).json({
       success: true,
-      count: farmers.length,
-      total: total,
-      page: page,
-      totalPages: Math.ceil(total / limit),
       data: farmers
     });
-    console.log("Fetched farmers:", farmers);
+
   } catch (error) {
-    console.error('Error in getAllFarmers:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 // Update Farmer
 exports.updateFarmer = async (req, res) => {
   try {

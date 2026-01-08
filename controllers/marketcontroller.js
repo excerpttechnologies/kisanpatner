@@ -109,17 +109,18 @@ exports.getAllMarkets = async (req, res) => {
 ================================ */
 exports.getMarketById = async (req, res) => {
   try {
-    const market = await Market.findOne({ marketId: req.params.marketId });
+    const market = await Market.findById(req.params.marketId);
 
     if (!market) {
-      return res.status(404).json({ message: "Market not found" });
+      return res.status(404).json({ success: false, message: "Market not found" });
     }
 
-    res.json(market);
+    res.json({ success: true, data: market });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 /* ===============================
    GET MARKETS BY PINCODE

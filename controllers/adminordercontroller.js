@@ -366,11 +366,103 @@ exports.getOrderDetails = async (req, res) => {
 };
 
 // Update order with new grade and fees
+// exports.updateOrderDetails = async (req, res) => {
+//   try {
+//     const { orderId } = req.params;
+//     const {
+//       productItems, // Array with updated grades, quantities, prices
+//       farmerLabourFee,
+//       traderLabourFee,
+//       farmerTransportFee,
+//       traderTransportFee,
+//       advanceAmount
+//     } = req.body;
+
+//     const order = await Order.findOne({ orderId });
+    
+//     if (!order) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Order not found'
+//       });
+//     }
+
+//     // Calculate totals
+//     let productTotal = 0;
+    
+//     // Update product items
+//     order.productItems = productItems.map(item => {
+//       const itemTotal = item.pricePerUnit * item.quantity;
+//       productTotal += itemTotal;
+      
+//       return {
+//         ...item,
+//         totalAmount: itemTotal
+//       };
+//     });
+
+//     // Calculate Farmer Payment (Product Total - Labour - Transport)
+//     const farmerTotal = productTotal - (farmerLabourFee || 0) - (farmerTransportFee || 0);
+//     const farmerRemaining = farmerTotal - (advanceAmount || 0);
+
+//     // Calculate Trader Payment (Product Total + Labour + Transport)
+//     const traderTotal = productTotal + (traderLabourFee || 0) + (traderTransportFee || 0);
+
+//     // Update adminToFarmerPayment
+//     order.adminToFarmerPayment = {
+//       totalAmount: farmerTotal,
+//       paidAmount: advanceAmount || 0,
+//       remainingAmount: farmerRemaining,
+//       paymentStatus: farmerRemaining === 0 ? 'paid' : (advanceAmount > 0 ? 'partial' : 'pending'),
+//       paymentHistory: advanceAmount > 0 ? [{
+//         amount: advanceAmount,
+//         paidDate: new Date(),
+//         paymentType: 'advance'
+//       }] : [],
+//       fees: {
+//         labourFee: farmerLabourFee || 0,
+//         transportFee: farmerTransportFee || 0,
+//         advanceAmount: advanceAmount || 0
+//       }
+//     };
+
+//     // Update traderToAdminPayment
+//     order.traderToAdminPayment = {
+//       totalAmount: traderTotal,
+    
+//       remainingAmount: traderTotal,
+//       paymentStatus: 'pending',
+//       paymentHistory: [],
+//       fees: {
+//         labourFee: traderLabourFee || 0,
+//         transportFee: traderTransportFee || 0
+//       }
+//     };
+
+//     order.updatedAt = new Date();
+    
+//     await order.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Order updated successfully',
+//       data: order
+//     });
+//   } catch (error) {
+//     console.error('Error updating order:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error updating order'
+//     });
+//   }
+// };
+
+
 exports.updateOrderDetails = async (req, res) => {
   try {
     const { orderId } = req.params;
     const {
-      productItems, // Array with updated grades, quantities, prices
+      productItems,
       farmerLabourFee,
       traderLabourFee,
       farmerTransportFee,
@@ -401,45 +493,75 @@ exports.updateOrderDetails = async (req, res) => {
       };
     });
 
-    // Calculate Farmer Payment (Product Total - Labour - Transport)
-    const farmerTotal = productTotal - (farmerLabourFee || 0) - (farmerTransportFee || 0);
-    const farmerRemaining = farmerTotal - (advanceAmount || 0);
-
-    // Calculate Trader Payment (Product Total + Labour + Transport)
-    const traderTotal = productTotal + (traderLabourFee || 0) + (traderTransportFee || 0);
-
-    // Update adminToFarmerPayment
-    order.adminToFarmerPayment = {
-      totalAmount: farmerTotal,
-      paidAmount: advanceAmount || 0,
-      remainingAmount: farmerRemaining,
-      paymentStatus: farmerRemaining === 0 ? 'paid' : (advanceAmount > 0 ? 'partial' : 'pending'),
-      paymentHistory: advanceAmount > 0 ? [{
-        amount: advanceAmount,
-        paidDate: new Date(),
-        paymentType: 'advance'
-      }] : [],
-      fees: {
-        labourFee: farmerLabourFee || 0,
-        transportFee: farmerTransportFee || 0,
-        advanceAmount: advanceAmount || 0
-      }
-    };
-
-    // Update traderToAdminPayment
-    order.traderToAdminPayment = {
-      totalAmount: traderTotal,
+    // ============ TRADER TO ADMIN PAYMENT ============
+    // Get existing paid amount from payment history
+    const existingTraderPaidAmount = order.traderToAdminPayment.paidAmount || 0;
     
-      remainingAmount: traderTotal,
-      paymentStatus: 'pending',
-      paymentHistory: [],
+    // Calculate new trader total
+    const newTraderTotal = productTotal + (traderLabourFee || 0) + (traderTransportFee || 0);
+    
+    // Calculate remaining = newTotal - alreadyPaid
+    const traderRemaining = newTraderTotal - existingTraderPaidAmount;
+    
+    // Determine payment status
+    let traderPaymentStatus = 'pending';
+    if (existingTraderPaidAmount >= newTraderTotal) {
+      traderPaymentStatus = 'paid';
+    } else if (existingTraderPaidAmount > 0) {
+      traderPaymentStatus = 'partial';
+    }
+
+    // Update traderToAdminPayment (PRESERVE paymentHistory)
+    order.traderToAdminPayment = {
+      totalAmount: newTraderTotal,
+      paidAmount: existingTraderPaidAmount,
+      remainingAmount: Math.max(0, traderRemaining), // Don't go negative
+      paymentStatus: traderPaymentStatus,
+      paymentHistory: order.traderToAdminPayment.paymentHistory || [], // PRESERVE
       fees: {
         labourFee: traderLabourFee || 0,
         transportFee: traderTransportFee || 0
       }
     };
 
+    // ============ ADMIN TO FARMER PAYMENT ============
+    // Get existing farmer paid amount
+    const existingFarmerPaidAmount = order.adminToFarmerPayment?.paidAmount || 0;
+    
+    // Calculate new farmer total
+    const newFarmerTotal = productTotal - (farmerLabourFee || 0) - (farmerTransportFee || 0);
+    
+    // If advance is provided, use it; otherwise use existing paid amount
+    const farmerPaidAmount = advanceAmount !== undefined ? advanceAmount : existingFarmerPaidAmount;
+    const farmerRemaining = newFarmerTotal - farmerPaidAmount;
+    
+    // Determine farmer payment status
+    let farmerPaymentStatus = 'pending';
+    if (farmerPaidAmount >= newFarmerTotal) {
+      farmerPaymentStatus = 'paid';
+    } else if (farmerPaidAmount > 0) {
+      farmerPaymentStatus = 'partial';
+    }
+
+    // Update adminToFarmerPayment
+    order.adminToFarmerPayment = {
+      totalAmount: newFarmerTotal,
+      paidAmount: farmerPaidAmount,
+      remainingAmount: Math.max(0, farmerRemaining),
+      paymentStatus: farmerPaymentStatus,
+      paymentHistory: order.adminToFarmerPayment?.paymentHistory || [],
+      fees: {
+        labourFee: farmerLabourFee || 0,
+        transportFee: farmerTransportFee || 0,
+        advanceAmount: farmerPaidAmount
+      }
+    };
+
     order.updatedAt = new Date();
+    
+    // Mark as modified for nested objects
+    order.markModified('traderToAdminPayment');
+    order.markModified('adminToFarmerPayment');
     
     await order.save();
 
@@ -453,6 +575,111 @@ exports.updateOrderDetails = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating order'
+    });
+  }
+};
+
+// Record manual payment from admin to farmer
+exports.recordFarmerPayment = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const {
+      amount,
+      paymentMethod,
+      paymentReference,
+      paymentNotes,
+      paidBy,
+      paidByName
+    } = req.body;
+
+    // Validate input
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment amount'
+      });
+    }
+
+    const order = await Order.findOne({ orderId });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    if (!order.adminToFarmerPayment) {
+      return res.status(400).json({
+        success: false,
+        message: 'No farmer payment details found'
+      });
+    }
+
+    // Check if payment exceeds remaining amount
+    if (amount > order.adminToFarmerPayment.remainingAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment amount (${amount}) exceeds remaining amount (${order.adminToFarmerPayment.remainingAmount})`
+      });
+    }
+
+    // Create payment record
+    const paymentRecord = {
+      amount: parseFloat(amount),
+      paidDate: new Date(),
+      paymentMethod: paymentMethod || 'cash',
+      paymentReference: paymentReference || '',
+      paymentNotes: paymentNotes || '',
+      paidBy: paidBy || '',
+      paidByName: paidByName || 'Admin'
+    };
+
+    // Update payment details
+    const newPaidAmount = order.adminToFarmerPayment.paidAmount + parseFloat(amount);
+    const newRemainingAmount = order.adminToFarmerPayment.totalAmount - newPaidAmount;
+
+    // Determine payment status
+    let paymentStatus = 'pending';
+    if (newRemainingAmount === 0) {
+      paymentStatus = 'paid';
+    } else if (newPaidAmount > 0) {
+      paymentStatus = 'partial';
+    }
+
+    // Update the payment object
+    order.adminToFarmerPayment.paidAmount = newPaidAmount;
+    order.adminToFarmerPayment.remainingAmount = newRemainingAmount;
+    order.adminToFarmerPayment.paymentStatus = paymentStatus;
+    
+    // Add to payment history
+    if (!order.adminToFarmerPayment.paymentHistory) {
+      order.adminToFarmerPayment.paymentHistory = [];
+    }
+    order.adminToFarmerPayment.paymentHistory.push(paymentRecord);
+
+    order.updatedAt = new Date();
+    
+    // Mark as modified for nested objects
+    order.markModified('adminToFarmerPayment');
+    
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment recorded successfully',
+      data: {
+        orderId: order.orderId,
+        paymentRecord,
+        updatedPayment: order.adminToFarmerPayment
+      }
+    });
+  } catch (error) {
+    console.error('Error recording farmer payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error recording payment',
+      error: error.message
     });
   }
 };

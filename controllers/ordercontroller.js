@@ -338,13 +338,165 @@
 //   }
 // };
 
-
-
-
 const Order = require("../models/order");
 const Product = require("../models/product");
 
-// ==================== CREATE ORDER ====================
+// // Create order after payment (Trader side)
+// exports.createOrder = async (req, res) => {
+//   try {
+//     const {
+//       traderId,
+//       traderName,
+//       traderMobile,
+//       traderEmail,
+//       cartItems, // Array of { productId, farmerId, grade, quantity, pricePerUnit }
+//       totalAmount,
+//       paidAmount,
+//       razorpayPaymentId,
+//       razorpayOrderId,
+//       razorpaySignature,
+//     } = req.body;
+//     console.log("ordre", req.body);
+//     // Validate input
+//     if (!traderId || !cartItems || cartItems.length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Trader ID and cart items are required",
+//       });
+//     }
+
+//     // Get farmerId from first item (assuming all items from same farmer)
+//     const farmerId = cartItems[0].farmerId;
+
+//     // Calculate totals and prepare product items
+//     const productItems = cartItems.map((item) => ({
+//       productId: item.productId,
+//       farmerId: item.farmerId,
+//       grade: item.grade,
+//       deliveryDate: item.deliveryDate,
+//       quantity: item.quantity,
+//       pricePerUnit: item.pricePerUnit,
+//       totalAmount: item.quantity * item.pricePerUnit,
+//     }));
+
+//     const calculatedTotal = productItems.reduce(
+//       (sum, item) => sum + item.totalAmount,
+//       0
+//     );
+//     const finalTotalAmount = totalAmount || calculatedTotal;
+//     const finalPaidAmount = paidAmount || 0;
+//     const remainingAmount = finalTotalAmount - finalPaidAmount;
+
+//     // Determine payment status
+//     let paymentStatus = "pending";
+//     if (finalPaidAmount >= finalTotalAmount) {
+//       paymentStatus = "paid";
+//     } else if (finalPaidAmount > 0) {
+//       paymentStatus = "partial";
+//     }
+
+//     // Create payment history record
+//     const paymentHistory =
+//       finalPaidAmount > 0
+//         ? [
+//             {
+//               amount: finalPaidAmount,
+//               paidDate: new Date(),
+//               razorpayPaymentId,
+//               razorpayOrderId,
+//               razorpaySignature,
+//             },
+//           ]
+//         : [];
+
+//     // Create order
+//     const newOrder = new Order({
+//       traderId,
+//       traderName,
+//       traderMobile,
+//       traderEmail,
+//       farmerId,
+//       productItems,
+//       traderToAdminPayment: {
+//         totalAmount: finalTotalAmount,
+//         paidAmount: finalPaidAmount,
+//         remainingAmount,
+//         paymentStatus,
+//         paymentHistory,
+//       },
+//       traderAcceptedStatus: true,
+//       farmerAcceptedStatus: false,
+//       orderStatus: "pending",
+//     });
+
+//     await newOrder.save();
+// for (const item of cartItems) {
+//       await Product.updateOne(
+//         {
+//           productId: item.productId,
+//           "gradePrices.grade": item.grade,
+//           "gradePrices.purchaseHistory.traderId": traderId,
+//         },
+//         {
+//           $set: {
+//             "gradePrices.$[grade].purchaseHistory.$[purchase].orderCreated": true,
+//             "gradePrices.$[grade].purchaseHistory.$[purchase].orderId": newOrder.orderId,
+//           },
+//         },
+//         {
+//           arrayFilters: [
+//             { "grade.grade": item.grade },
+//             { 
+//               "purchase.traderId": traderId,
+//               "purchase.quantity": item.quantity,
+//               "purchase.pricePerUnit": item.pricePerUnit,
+//             },
+//           ],
+//         }
+//       );
+//     }
+//     // Update product purchaseHistory
+//     for (const item of cartItems) {
+//       await Product.findOneAndUpdate(
+//         {
+//           productId: item.productId,
+//           "gradePrices.grade": item.grade,
+//         },
+//         {
+//           $push: {
+//             "gradePrices.$.purchaseHistory": {
+//               traderId,
+//               traderName,
+//               quantity: item.quantity,
+//               pricePerUnit: item.pricePerUnit,
+//               totalAmount: item.quantity * item.pricePerUnit,
+//               purchaseDate: new Date(),
+//               purchaseType: "direct",
+//               paymentStatus: paymentStatus === "paid" ? "paid" : "pending",
+//               razorpayPaymentId,
+//               razorpayOrderId,
+//             },
+//           },
+//         }
+//       );
+//     }
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Order created successfully",
+//       data: newOrder,
+//     });
+//   } catch (error) {
+//     console.error("Error creating order:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to create order",
+//       error: error.message,
+//     });
+//   }
+// };
+// FIXED createOrder function in orderController.js
+
 exports.createOrder = async (req, res) => {
   try {
     const {
@@ -359,9 +511,8 @@ exports.createOrder = async (req, res) => {
       razorpayOrderId,
       razorpaySignature,
     } = req.body;
-    
-    console.log("Creating order:", req.body);
 
+    // Validate input
     if (!traderId || !cartItems || cartItems.length === 0) {
       return res.status(400).json({
         success: false,
@@ -369,9 +520,25 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    // Get farmerId from first item
     const farmerId = cartItems[0].farmerId;
 
-    const productItems = cartItems.map((item) => ({
+    // Calculate totals and prepare product items
+    // const productItems = cartItems.map((item) => ({
+    //   productId: item.productId,
+    //   farmerId: item.farmerId,
+    //   grade: item.grade,
+    //   deliveryDate: item.deliveryDate,
+    //   quantity: item.quantity,
+    //   pricePerUnit: item.pricePerUnit,
+    //   totalAmount: item.quantity * item.pricePerUnit,
+    // }));
+// In your createOrder controller
+const productItems = await Promise.all(
+  cartItems.map(async (item) => {
+    const product = await Product.findOne({ productId: item.productId });
+    
+    return {
       productId: item.productId,
       farmerId: item.farmerId,
       grade: item.grade,
@@ -379,26 +546,27 @@ exports.createOrder = async (req, res) => {
       quantity: item.quantity,
       pricePerUnit: item.pricePerUnit,
       totalAmount: item.quantity * item.pricePerUnit,
-      nearestMarket: item.nearestMarket,
-    }));
-
+      nearestMarket: product.nearestMarket, // 🔥 ADD THIS
+    };
+  })
+);
     const calculatedTotal = productItems.reduce(
       (sum, item) => sum + item.totalAmount,
       0
     );
-    
     const finalTotalAmount = totalAmount || calculatedTotal;
     const finalPaidAmount = paidAmount || 0;
     const remainingAmount = finalTotalAmount - finalPaidAmount;
 
     // Determine payment status
     let paymentStatus = "pending";
-    if (order.traderToAdminPayment.remainingAmount <= 0) {
+    if (finalPaidAmount >= finalTotalAmount) {
       paymentStatus = "paid";
     } else if (finalPaidAmount > 0) {
       paymentStatus = "partial";
     }
 
+    // Create payment history record
     const paymentHistory =
       finalPaidAmount > 0
         ? [
@@ -412,14 +580,7 @@ exports.createOrder = async (req, res) => {
           ]
         : [];
 
-    // ✅ AUTO GENERATE TRADER DELIVERY KEY IF FULL PAYMENT
-    let traderDeliveryKey = null;
-    if (paymentStatus === "paid") {
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      traderDeliveryKey = `TRADER${rand}`;
-      console.log("✅ Trader Key Generated at Creation:", traderDeliveryKey);
-    }
-
+    // Create order
     const newOrder = new Order({
       traderId,
       traderName,
@@ -434,7 +595,6 @@ exports.createOrder = async (req, res) => {
         paymentStatus,
         paymentHistory,
       },
-      traderDeliveryKey,
       traderAcceptedStatus: true,
       farmerAcceptedStatus: false,
       orderStatus: "pending",
@@ -442,36 +602,43 @@ exports.createOrder = async (req, res) => {
 
     await newOrder.save();
 
-    // Update product purchaseHistory
+    // 🔥 FIX: ONLY mark existing purchases as ordered - DO NOT create new ones
     for (const item of cartItems) {
-      await Product.findOneAndUpdate(
+      await Product.updateOne(
         {
           productId: item.productId,
           "gradePrices.grade": item.grade,
+          "gradePrices.purchaseHistory.traderId": traderId,
         },
         {
-          $push: {
-            "gradePrices.$.purchaseHistory": {
-              traderId,
-              traderName,
-              quantity: item.quantity,
-              pricePerUnit: item.pricePerUnit,
-              totalAmount: item.quantity * item.pricePerUnit,
-              purchaseDate: new Date(),
-              purchaseType: "direct",
-              paymentStatus: paymentStatus === "paid" ? "paid" : "pending",
-              razorpayPaymentId,
-              razorpayOrderId,
-            },
+          $set: {
+            "gradePrices.$[grade].purchaseHistory.$[purchase].orderCreated": true,
+            "gradePrices.$[grade].purchaseHistory.$[purchase].orderId": newOrder.orderId,
+            "gradePrices.$[grade].purchaseHistory.$[purchase].paymentStatus": 
+              paymentStatus === "paid" ? "paid" : "pending",
+            "gradePrices.$[grade].purchaseHistory.$[purchase].razorpayPaymentId": razorpayPaymentId,
+            "gradePrices.$[grade].purchaseHistory.$[purchase].razorpayOrderId": razorpayOrderId,
           },
+        },
+        {
+          arrayFilters: [
+            { "grade.grade": item.grade },
+            { 
+              "purchase.traderId": traderId,
+              "purchase.quantity": item.quantity,
+              "purchase.pricePerUnit": item.pricePerUnit,
+              "purchase.orderCreated": { $ne: true } // Only update if not already marked
+            },
+          ],
         }
       );
     }
 
+    // ❌ REMOVED: The duplicate $push operation that was adding new purchase records
+
     res.status(201).json({
       success: true,
       message: "Order created successfully",
-      traderDeliveryKey: traderDeliveryKey || null,
       data: newOrder,
     });
   } catch (error) {
@@ -483,21 +650,114 @@ exports.createOrder = async (req, res) => {
     });
   }
 };
+// Farmer accepts order and adds admin to farmer payment
+// exports.farmerAcceptOrder = async (req, res) => {
+//   try {
+//     const {
+//       farmerId,
+//       traderId,
+//       productItems, // Array of { productId, grade, quantity }
+//       farmerName,
+//       farmerMobile,
+//       farmerEmail,
+//       totalFarmerAmount, // Net amount farmer will receive (after commission deduction)
+//       commissionRate,
+//     } = req.body;
 
-// ==================== FARMER ACCEPTS ORDER ====================
+//     // Validate input
+//     if (!farmerId || !traderId || !productItems || productItems.length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Farmer ID, Trader ID and product items are required",
+//       });
+//     }
+
+//     // Find matching order
+//     // Match by: farmerId, traderId, and product details (productId + grade)
+//     const order = await Order.findOne({
+//       farmerId: farmerId,
+//       traderId: traderId,
+//       farmerAcceptedStatus: false, // Only update if not already accepted
+//     });
+
+//     if (!order) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Order not found or already accepted",
+//       });
+//     }
+
+//     // Verify product items match
+//     const orderProductMatches = productItems.every((reqItem) => {
+//       return order.productItems.some(
+//         (orderItem) =>
+//           orderItem.productId === reqItem.productId &&
+//           orderItem.grade === reqItem.grade
+//       );
+//     });
+
+//     if (!orderProductMatches) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Product items do not match the order",
+//       });
+//     }
+
+//     // Update farmer details
+//     order.farmerName = farmerName || order.farmerName;
+//     order.farmerMobile = farmerMobile || order.farmerMobile;
+//     order.farmerEmail = farmerEmail || order.farmerEmail;
+
+//     // Set farmer accepted status to true
+//     order.farmerAcceptedStatus = true;
+
+//     // Add adminToFarmerPayment
+//     order.adminToFarmerPayment = {
+//       totalAmount: totalFarmerAmount,
+//       paidAmount: 0,
+//       remainingAmount: totalFarmerAmount,
+//       paymentStatus: "pending",
+//       paymentHistory: [],
+//     };
+
+//     // Update order status
+//     order.orderStatus = "processing";
+//     order.updatedAt = Date.now();
+
+//     await order.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Order accepted by farmer successfully",
+//       data: order,
+//     });
+//   } catch (error) {
+//     console.error("Error accepting order:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to accept order",
+//       error: error.message,
+//     });
+//   }
+// };
 exports.farmerAcceptOrder = async (req, res) => {
   try {
     const {
       farmerId,
       traderId,
-      productItems,
+      productItems, // Array of { productId, grade, quantity }
       farmerName,
       farmerMobile,
       farmerEmail,
-      totalFarmerAmount,
+      totalFarmerAmount, // Net amount farmer will receive (after commission deduction)
       commissionRate,
+      purchaseHistoryId, // NEW: ID of purchase history to mark as orderCreated
+      productId,         // NEW: Product MongoDB _id
+      gradeId            // NEW: Grade _id
     } = req.body;
+    console.log("farmerAcceptOrder", req.body);
 
+    // Validate input
     if (!farmerId || !traderId || !productItems || productItems.length === 0) {
       return res.status(400).json({
         success: false,
@@ -505,11 +765,16 @@ exports.farmerAcceptOrder = async (req, res) => {
       });
     }
 
+    // 🔥 FIXED: Find order that contains this specific product
     const order = await Order.findOne({
       farmerId: farmerId,
       traderId: traderId,
-      farmerAcceptedStatus: false,
+      farmerAcceptedStatus: false, // Only update if not already accepted
+      'productItems.productId': productItems[0].productId,
+      'productItems.grade': productItems[0].grade
     });
+
+    console.log("order found:", order);
 
     if (!order) {
       return res.status(404).json({
@@ -518,26 +783,15 @@ exports.farmerAcceptOrder = async (req, res) => {
       });
     }
 
-    const orderProductMatches = productItems.every((reqItem) => {
-      return order.productItems.some(
-        (orderItem) =>
-          orderItem.productId === reqItem.productId &&
-          orderItem.grade === reqItem.grade
-      );
-    });
-
-    if (!orderProductMatches) {
-      return res.status(400).json({
-        success: false,
-        message: "Product items do not match the order",
-      });
-    }
-
+    // Update farmer details
     order.farmerName = farmerName || order.farmerName;
     order.farmerMobile = farmerMobile || order.farmerMobile;
     order.farmerEmail = farmerEmail || order.farmerEmail;
+
+    // Set farmer accepted status to true
     order.farmerAcceptedStatus = true;
 
+    // Add adminToFarmerPayment
     order.adminToFarmerPayment = {
       totalAmount: totalFarmerAmount,
       paidAmount: 0,
@@ -546,10 +800,42 @@ exports.farmerAcceptOrder = async (req, res) => {
       paymentHistory: [],
     };
 
+    // Update order status
     order.orderStatus = "processing";
     order.updatedAt = Date.now();
 
     await order.save();
+
+    // 🔥 NEW: Mark purchase history as orderCreated = true (if provided)
+    if (purchaseHistoryId && productId && gradeId) {
+      const Product = require('../models/product');
+      
+      await Product.updateOne(
+        { 
+          _id: productId,
+          'gradePrices._id': gradeId
+        },
+        { 
+          $set: { 
+            'gradePrices.$[grade].purchaseHistory.$[purchase].orderCreated': true,
+            'gradePrices.$[grade].purchaseHistory.$[purchase].orderId': order.orderId
+          }
+        },
+        {
+          arrayFilters: [
+            { 'grade._id': gradeId },
+            { 'purchase._id': purchaseHistoryId }
+          ]
+        }
+      );
+
+      console.log('✅ Purchase history marked as orderCreated:', {
+        productId,
+        gradeId,
+        purchaseHistoryId,
+        orderId: order.orderId
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -565,11 +851,11 @@ exports.farmerAcceptOrder = async (req, res) => {
     });
   }
 };
-
-// ==================== GET FARMER ORDERS ====================
+// Get farmer's orders
 exports.getFarmerOrders = async (req, res) => {
   try {
     const { farmerId } = req.params;
+
     const orders = await Order.find({ farmerId }).sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -587,27 +873,12 @@ exports.getFarmerOrders = async (req, res) => {
   }
 };
 
-// ==================== GET TRADER ORDERS ====================
+// Get trader's orders
 exports.getTraderOrders = async (req, res) => {
   try {
     const { traderId } = req.params;
+
     const orders = await Order.find({ traderId }).sort({ createdAt: -1 });
-
-    // ✅ AUTO-GENERATE KEY IF PAYMENT IS PAID BUT KEY MISSING
-    let updated = false;
-
-    for (let order of orders) {
-      if (
-        order.traderToAdminPayment?.paymentStatus === "paid" &&
-        !order.traderDeliveryKey
-      ) {
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        order.traderDeliveryKey = `TRADER${rand}`;
-        updated = true;
-        console.log("✅ Auto fixed missing trader key:", order.orderId);
-        await order.save();
-      }
-    }
 
     res.status(200).json({
       success: true,
@@ -624,11 +895,11 @@ exports.getTraderOrders = async (req, res) => {
   }
 };
 
-
-// ==================== GET SINGLE ORDER ====================
+// Get single order
 exports.getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
+
     const order = await Order.findOne({ orderId });
 
     if (!order) {
@@ -652,7 +923,7 @@ exports.getOrderById = async (req, res) => {
   }
 };
 
-// ==================== ADD PAYMENT (TRADER TO ADMIN) ====================
+// Add payment to existing order (Trader to Admin)
 exports.addPaymentToOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -672,12 +943,12 @@ exports.addPaymentToOrder = async (req, res) => {
       });
     }
 
-    // Update payment amounts
+    // Update payment
     order.traderToAdminPayment.paidAmount += paidAmount;
     order.traderToAdminPayment.remainingAmount -= paidAmount;
 
     // Update payment status
-    if (order.traderToAdminPayment.remainingAmount <= 100) {
+    if (order.traderToAdminPayment.remainingAmount <= 0) {
       order.traderToAdminPayment.paymentStatus = "paid";
       order.traderToAdminPayment.remainingAmount = 0;
     } else if (order.traderToAdminPayment.paidAmount > 0) {
@@ -693,23 +964,12 @@ exports.addPaymentToOrder = async (req, res) => {
       razorpaySignature,
     });
 
-    // ✅ AUTO GENERATE TRADER DELIVERY KEY WHEN PAYMENT BECOMES PAID
-    if (
-      order.traderToAdminPayment.paymentStatus === "paid" &&
-      !order.traderDeliveryKey
-    ) {
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      order.traderDeliveryKey = `TRADER${rand}`;
-      console.log("✅ Trader Delivery Key Generated:", order.traderDeliveryKey);
-    }
-
     order.updatedAt = Date.now();
     await order.save();
 
     res.status(200).json({
       success: true,
       message: "Payment added successfully",
-      traderDeliveryKey: order.traderDeliveryKey || null,
       data: order,
     });
   } catch (error) {
@@ -722,7 +982,7 @@ exports.addPaymentToOrder = async (req, res) => {
   }
 };
 
-// ==================== ADD PAYMENT (ADMIN TO FARMER) ====================
+// Add payment from Admin to Farmer
 exports.addAdminToFarmerPayment = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -744,9 +1004,11 @@ exports.addAdminToFarmerPayment = async (req, res) => {
       });
     }
 
+    // Update payment
     order.adminToFarmerPayment.paidAmount += paidAmount;
     order.adminToFarmerPayment.remainingAmount -= paidAmount;
 
+    // Update payment status
     if (order.adminToFarmerPayment.remainingAmount <= 0) {
       order.adminToFarmerPayment.paymentStatus = "paid";
       order.adminToFarmerPayment.remainingAmount = 0;
@@ -754,6 +1016,7 @@ exports.addAdminToFarmerPayment = async (req, res) => {
       order.adminToFarmerPayment.paymentStatus = "partial";
     }
 
+    // Add to payment history
     order.adminToFarmerPayment.paymentHistory.push({
       amount: paidAmount,
       paidDate: new Date(),
@@ -778,7 +1041,7 @@ exports.addAdminToFarmerPayment = async (req, res) => {
   }
 };
 
-// ==================== UPDATE ORDER STATUS ====================
+// Update order status
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -815,41 +1078,24 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// ==================== GET ALL ORDERS (ADMIN) ====================
+// Get all orders (admin)
 exports.getAllOrders = async (req, res) => {
   try {
-    const {
-      status,
-      traderId,
-      farmerId,
-      traderPaymentStatus,
-      showPartialPayments = "false",
-    } = req.query;
+    const { status, traderId, farmerId, paymentStatus } = req.query;
 
     let filter = {};
-
     if (status) filter.orderStatus = status;
     if (traderId) filter.traderId = traderId;
     if (farmerId) filter.farmerId = farmerId;
-
-    if (traderPaymentStatus) {
-      filter["traderToAdminPayment.paymentStatus"] = traderPaymentStatus;
-    }
+    if (paymentStatus)
+      filter["traderToAdminPayment.paymentStatus"] = paymentStatus;
 
     const orders = await Order.find(filter).sort({ createdAt: -1 });
 
-    let filteredOrders = orders;
-
-    if (showPartialPayments === "false") {
-      filteredOrders = orders.filter(
-        (order) => order.traderToAdminPayment?.paymentStatus !== "pending"
-      );
-    }
-
     res.status(200).json({
       success: true,
-      count: filteredOrders.length,
-      data: filteredOrders,
+      count: orders.length,
+      data: orders,
     });
   } catch (error) {
     console.error("Error fetching all orders:", error);
@@ -861,7 +1107,8 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
-// ==================== TRANSPORTER ACCEPTS ORDER ====================
+//transporter-arvind
+
 exports.transporterAcceptOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -1154,5 +1401,4 @@ exports.generateTraderDeliveryKey = async (req, res) => {
     });
   }
 };
-
 module.exports = exports;

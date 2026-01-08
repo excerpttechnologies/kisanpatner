@@ -144,6 +144,11 @@ const vehicleSchema = new mongoose.Schema({
 });
 
 const transporterSchema = new mongoose.Schema({
+  transporterId: {
+  type: String,
+  unique: true
+},
+
   personalInfo: {
     name: { type: String, required: true },
     mobileNo: { type: String, required: true, unique: true },

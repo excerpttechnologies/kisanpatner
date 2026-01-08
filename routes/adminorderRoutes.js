@@ -14,6 +14,8 @@ router.post(
   "/orders/:orderId/confirm-transportation",
   adminOrderController.confirmTransportation
 );
+// Record manual payment to farmer
+router.post('/orders/:orderId/farmer-payment', adminOrderController.recordFarmerPayment);
 
 // Update transportation verification
 router.patch(

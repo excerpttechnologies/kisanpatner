@@ -29,6 +29,16 @@ const offerSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+    isReadByFarmer: {
+    type: Boolean,
+    default: false
+  },
+  notificationReadAt: Date,
+ isReadByTrader: {
+    type: Boolean,
+    default: false
+  },
+  traderNotificationReadAt: Date,
   createdAt: {
     type: Date,
     default: Date.now

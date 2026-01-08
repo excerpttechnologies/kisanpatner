@@ -31,7 +31,7 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   }
 });
-
+router.get('/admin-notifications', productController.getAdminNotifications);
 // Routes
 router.post('/add', upload.any(), productController.addProduct);
 router.get('/all', productController.getAllProducts);
@@ -46,9 +46,20 @@ router.delete('/delete/:id', productController.deleteProduct);
 router.post('/make-offer', productController.makeOffer);
 router.post('/accept-listed-price', productController.acceptListedPrice);
 router.post('/accept-trader-offer', productController.acceptTraderOffer);
+//router.post('/make-counter-offer', productController.makeCounterOffer);
 router.post('/make-counter-offer', productController.makeCounterOffer);
+router.post('/accept-counter-offer', productController.acceptCounterOffer);
 router.post('/reject-trader-offer', productController.rejectTraderOffer);
 // Get trader's purchase history
 router.get('/trader-purchases/:traderId', productController.getTraderPurchases);
 router.post('/make-offer-batch', productController.makeOfferBatch);
+// Notification routes
+router.get('/farmer-notifications/:farmerId', productController.getFarmerNotifications);
+router.post('/mark-notification-read', productController.markNotificationAsRead);
+router.post('/mark-all-notifications-read', productController.markAllNotificationsAsRead);
+// Trader notification routes
+router.get('/trader-notifications/:traderId', productController.getTraderNotifications);
+router.post('/mark-trader-notification-read', productController.markTraderNotificationAsRead);
+router.post('/mark-all-trader-notifications-read', productController.markAllTraderNotificationsAsRead);
+
 module.exports = router;

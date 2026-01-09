@@ -98,10 +98,7 @@ router.get("/trader/:traderId", orderController.getTraderOrders);
 
 // Get farmer's orders
 router.get("/farmer/:farmerId", orderController.getFarmerOrders);
-router.post(
-  "/:orderId/transporter-accept",
-  orderController.transporterAcceptOrder
-);
+router.post("/:orderId/transporter-accept",orderController.transporterAcceptOrder);
 
 router.post(
   "/:orderId/admin-select-transporter",

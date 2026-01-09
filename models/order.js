@@ -339,80 +339,7 @@ const productItemSchema = new mongoose.Schema(
   { _id: true }
 );
 
-// const paymentRecordSchema = new mongoose.Schema(
-//   {
-//     amount: {
-//       type: Number,
-//       required: true,
-//     },
-//     paidDate: {
-//       type: Date,
-//       default: Date.now,
-//     },
- 
-//     razorpayPaymentId: String,
-//     razorpayOrderId: String,
-//     razorpaySignature: String,
-//      isReadByTrader: {
-//       type: Boolean,
-//       default: false
-//     },
-//     traderNotificationReadAt: Date
-//   },
-//   { _id: true }
-// );
 
-// const traderToAdminPaymentSchema = new mongoose.Schema(
-//   {
-//     totalAmount: {
-//       type: Number,
-//       required: true,
-//     },
-//     paidAmount: {
-//       type: Number,
-//       default: 0,
-//     },
-//     remainingAmount: {
-//       type: Number,
-//       required: true,
-//     },
-//     paymentStatus: {
-//       type: String,
-//       enum: ["pending", "partial", "paid"],
-//       default: "pending",
-//     },
-//     paymentHistory: [paymentRecordSchema],
-//   },
-//   { _id: false }
-// );
-
-// const adminToFarmerPaymentSchema = new mongoose.Schema(
-//   {
-//     totalAmount: {
-//       type: Number,
-//       required: true,
-//     },
-//     paidAmount: {
-//       type: Number,
-//       default: 0,
-//     },
-//     remainingAmount: {
-//       type: Number,
-//       required: true,
-//     },
-//     paymentStatus: {
-//       type: String,
-//       enum: ["pending", "partial", "paid"],
-//       default: "pending",
-//     },
-//     paymentHistory: [paymentRecordSchema],
-//   },
-//   { _id: false }
-// );
-
-// Transporter Details Schema with Verification Fields
-
-// Add to Order model
 
 const paymentRecordSchema = new mongoose.Schema(
   {
@@ -615,7 +542,34 @@ traderDeliveryKey: { type: String },
     type: Date,
     default: Date.now,
   },
+  nearestMarket: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Market",
+},
+
+
+adminPickupKey: { type: String },
+
+traderDeliveryKey: { type: String },
+
+deliveryStatus: {
+  type: String,
+  enum: ["pending", "in-transit", "delivered"],
+  default: "pending",
+},
+
+transporterStatus: {
+  type: String,
+  enum: ["pending", "accepted", "approved", "started", "completed"],
+  default: "pending",
+},
+
+transporterDetails: transporterDetailsSchema,
+
 });
+
+
+
 
 // Auto-generate orderId before saving
 orderSchema.pre("save", async function () {

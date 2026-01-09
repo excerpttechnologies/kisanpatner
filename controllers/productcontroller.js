@@ -1104,3 +1104,707 @@ exports.makeOfferBatch = async (req, res) => {
     });
   }
 };
+
+// Get farmer notifications with unread count
+exports.getFarmerNotifications = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+
+    const products = await Product.find({ farmerId })
+      .populate('categoryId', 'categoryName')
+      .populate('subCategoryId', 'subCategoryName')
+      .sort({ updatedAt: -1 });
+
+    const notifications = [];
+    let unreadCount = 0;
+
+    products.forEach(product => {
+      product.gradePrices.forEach(grade => {
+        if (grade.offers && grade.offers.length > 0) {
+          grade.offers.forEach(offer => {
+            // Create notification for each offer
+            const notification = {
+              _id: offer._id,
+              offerId: offer.offerId,
+              productId: product._id,
+              productName: product.cropBriefDetails,
+              productCode: product.productId,
+              gradeId: grade._id,
+              gradeName: grade.grade,
+              traderId: offer.traderId,
+              traderName: offer.traderName || 'Unknown Trader',
+              offeredPrice: offer.offeredPrice,
+              quantity: offer.quantity,
+              totalAmount: offer.offeredPrice * offer.quantity,
+              status: offer.status,
+              counterPrice: offer.counterPrice,
+              counterQuantity: offer.counterQuantity,
+              counterDate: offer.counterDate,
+              isRead: offer.isReadByFarmer || false,
+              notificationReadAt: offer.notificationReadAt,
+              createdAt: offer.createdAt,
+              unitMeasurement: product.unitMeasurement,
+              categoryName: product.categoryId?.categoryName,
+              subCategoryName: product.subCategoryId?.subCategoryName
+            };
+
+            notifications.push(notification);
+
+            // Count unread
+            if (!offer.isReadByFarmer) {
+              unreadCount++;
+            }
+          });
+        }
+      });
+    });
+
+    // Sort by date, newest first
+    notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.status(200).json({
+      success: true,
+      unreadCount,
+      totalCount: notifications.length,
+      data: notifications
+    });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Mark notification as read
+exports.markNotificationAsRead = async (req, res) => {
+  try {
+    const { productId, gradeId, offerId } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    const grade = product.gradePrices.id(gradeId);
+    if (!grade) {
+      return res.status(404).json({
+        success: false,
+        message: 'Grade not found'
+      });
+    }
+
+    const offer = grade.offers.id(offerId);
+    if (!offer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Offer not found'
+      });
+    }
+
+    offer.isReadByFarmer = true;
+    offer.notificationReadAt = new Date();
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification marked as read'
+    });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Mark all notifications as read for a farmer
+exports.markAllNotificationsAsRead = async (req, res) => {
+  try {
+    const { farmerId } = req.body;
+
+    const products = await Product.find({ farmerId });
+
+    let updatedCount = 0;
+
+    for (const product of products) {
+      let productUpdated = false;
+      
+      product.gradePrices.forEach(grade => {
+        if (grade.offers && grade.offers.length > 0) {
+          grade.offers.forEach(offer => {
+            if (!offer.isReadByFarmer) {
+              offer.isReadByFarmer = true;
+              offer.notificationReadAt = new Date();
+              productUpdated = true;
+              updatedCount++;
+            }
+          });
+        }
+      });
+
+      if (productUpdated) {
+        await product.save();
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${updatedCount} notifications marked as read`,
+      updatedCount
+    });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Get trader notifications
+exports.getTraderNotifications = async (req, res) => {
+  try {
+    const { traderId } = req.params;
+
+    const products = await Product.find({
+      "gradePrices.offers.traderId": traderId
+    })
+      .populate('categoryId', 'categoryName')
+      .populate('subCategoryId', 'subCategoryName')
+      .sort({ updatedAt: -1 });
+
+    const notifications = [];
+    let unreadCount = 0;
+
+    products.forEach(product => {
+      product.gradePrices.forEach(grade => {
+        if (grade.offers && grade.offers.length > 0) {
+          grade.offers
+            .filter(offer => offer.traderId === traderId)
+            .forEach(offer => {
+              const notification = {
+                _id: offer._id,
+                offerId: offer.offerId,
+                productId: product._id,
+                productName: product.cropBriefDetails,
+                productCode: product.productId,
+                farmerId: product.farmerId,
+                gradeId: grade._id,
+                gradeName: grade.grade,
+                offeredPrice: offer.offeredPrice,
+                quantity: offer.quantity,
+                totalAmount: offer.offeredPrice * offer.quantity,
+                status: offer.status,
+                counterPrice: offer.counterPrice,
+                counterQuantity: offer.counterQuantity,
+                counterDate: offer.counterDate,
+                isRead: offer.isReadByTrader || false,
+                notificationReadAt: offer.traderNotificationReadAt,
+                createdAt: offer.createdAt,
+                unitMeasurement: product.unitMeasurement,
+                categoryName: product.categoryId?.categoryName,
+                subCategoryName: product.subCategoryId?.subCategoryName,
+                nearestMarket: product.nearestMarket,
+                deliveryDate: product.deliveryDate
+              };
+
+              notifications.push(notification);
+
+              if (!offer.isReadByTrader) {
+                unreadCount++;
+              }
+            });
+        }
+      });
+    });
+
+    // Fetch payment notifications from orders
+    const Order = require('../models/order');
+    const orders = await Order.find({ traderId }).sort({ createdAt: -1 });
+
+    orders.forEach(order => {
+      // Check for payment status changes
+      if (order.traderToAdminPayment && 
+          !order.traderToAdminPayment.lastStatusChangeReadByTrader) {
+        notifications.push({
+          _id: `payment_${order._id}`,
+          type: 'payment',
+          orderId: order.orderId,
+          orderObjectId: order._id,
+          farmerId: order.farmerId,
+          farmerName: order.farmerName,
+          totalAmount: order.traderToAdminPayment.totalAmount,
+          paidAmount: order.traderToAdminPayment.paidAmount,
+          remainingAmount: order.traderToAdminPayment.remainingAmount,
+          paymentStatus: order.traderToAdminPayment.paymentStatus,
+          fees: order.traderToAdminPayment.fees,
+          isRead: false,
+          createdAt: order.traderToAdminPayment.lastStatusChangeDate || order.createdAt,
+          message: `Payment ${order.traderToAdminPayment.paymentStatus} for order ${order.orderId}`
+        });
+        unreadCount++;
+      }
+
+      // Check for individual payment records
+      if (order.traderToAdminPayment && order.traderToAdminPayment.paymentHistory) {
+        order.traderToAdminPayment.paymentHistory
+          .filter(payment => !payment.isReadByTrader)
+          .forEach(payment => {
+            notifications.push({
+              _id: `payment_record_${payment._id}`,
+              type: 'payment_received',
+              orderId: order.orderId,
+              orderObjectId: order._id,
+              paymentId: payment._id,
+              amount: payment.amount,
+              paidDate: payment.paidDate,
+              razorpayPaymentId: payment.razorpayPaymentId,
+              isRead: false,
+              createdAt: payment.paidDate,
+              message: `Payment of ₹${payment.amount} received for order ${order.orderId}`
+            });
+            unreadCount++;
+          });
+      }
+    });
+
+    // Sort all notifications by date
+    notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.status(200).json({
+      success: true,
+      unreadCount,
+      totalCount: notifications.length,
+      data: notifications
+    });
+  } catch (error) {
+    console.error('Error fetching trader notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Mark trader notification as read
+exports.markTraderNotificationAsRead = async (req, res) => {
+  try {
+    const { notificationId, type } = req.body;
+
+    if (type === 'payment' || type === 'payment_status') {
+      // Mark payment notification as read
+      const { orderObjectId } = req.body;
+      const Order = require('../models/order');
+      const order = await Order.findById(orderObjectId);
+      
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        });
+      }
+
+      if (order.traderToAdminPayment) {
+        order.traderToAdminPayment.lastStatusChangeReadByTrader = true;
+        await order.save();
+      }
+    } else if (type === 'payment_received') {
+      // Mark individual payment record as read
+      const { orderObjectId, paymentId } = req.body;
+      const Order = require('../models/order');
+      const order = await Order.findById(orderObjectId);
+      
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        });
+      }
+
+      const payment = order.traderToAdminPayment.paymentHistory.id(paymentId);
+      if (payment) {
+        payment.isReadByTrader = true;
+        payment.traderNotificationReadAt = new Date();
+        await order.save();
+      }
+    } else {
+      // Mark offer notification as read
+      const { productId, gradeId, offerId } = req.body;
+      const product = await Product.findById(productId);
+      
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: 'Product not found'
+        });
+      }
+
+      const grade = product.gradePrices.id(gradeId);
+      if (!grade) {
+        return res.status(404).json({
+          success: false,
+          message: 'Grade not found'
+        });
+      }
+
+      const offer = grade.offers.id(offerId);
+      if (!offer) {
+        return res.status(404).json({
+          success: false,
+          message: 'Offer not found'
+        });
+      }
+
+      offer.isReadByTrader = true;
+      offer.traderNotificationReadAt = new Date();
+      await product.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification marked as read'
+    });
+  } catch (error) {
+    console.error('Error marking trader notification as read:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Mark all trader notifications as read
+exports.markAllTraderNotificationsAsRead = async (req, res) => {
+  try {
+    const { traderId } = req.body;
+
+    let updatedCount = 0;
+
+    // Update offer notifications
+    const products = await Product.find({
+      "gradePrices.offers.traderId": traderId
+    });
+
+    for (const product of products) {
+      let productUpdated = false;
+      
+      product.gradePrices.forEach(grade => {
+        if (grade.offers && grade.offers.length > 0) {
+          grade.offers
+            .filter(offer => offer.traderId === traderId)
+            .forEach(offer => {
+              if (!offer.isReadByTrader) {
+                offer.isReadByTrader = true;
+                offer.traderNotificationReadAt = new Date();
+                productUpdated = true;
+                updatedCount++;
+              }
+            });
+        }
+      });
+
+      if (productUpdated) {
+        await product.save();
+      }
+    }
+
+    // Update payment notifications
+    const Order = require('../models/order');
+    const orders = await Order.find({ traderId });
+
+    for (const order of orders) {
+      let orderUpdated = false;
+
+      if (order.traderToAdminPayment && 
+          !order.traderToAdminPayment.lastStatusChangeReadByTrader) {
+        order.traderToAdminPayment.lastStatusChangeReadByTrader = true;
+        orderUpdated = true;
+        updatedCount++;
+      }
+
+      if (order.traderToAdminPayment && order.traderToAdminPayment.paymentHistory) {
+        order.traderToAdminPayment.paymentHistory.forEach(payment => {
+          if (!payment.isReadByTrader) {
+            payment.isReadByTrader = true;
+            payment.traderNotificationReadAt = new Date();
+            orderUpdated = true;
+            updatedCount++;
+          }
+        });
+      }
+
+      if (orderUpdated) {
+        await order.save();
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${updatedCount} notifications marked as read`,
+      updatedCount
+    });
+  } catch (error) {
+    console.error('Error marking all trader notifications as read:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+exports.getAdminNotifications = async (req, res) => {
+  try {
+    const notifications = [];
+    let unreadCount = 0;
+
+    // ========== FETCH ALL OFFERS FROM ALL PRODUCTS ==========
+    const products = await Product.find()
+      .populate('categoryId', 'categoryName')
+      .populate('subCategoryId', 'subCategoryName')
+      .sort({ updatedAt: -1 });
+
+    products.forEach(product => {
+      product.gradePrices.forEach(grade => {
+        if (grade.offers && grade.offers.length > 0) {
+          grade.offers.forEach(offer => {
+            notifications.push({
+              _id: offer._id,
+              type: 'offer',
+              offerId: offer.offerId,
+              productId: product._id,
+              productName: product.cropBriefDetails,
+              productCode: product.productId,
+              farmerId: product.farmerId,
+              gradeId: grade._id,
+              gradeName: grade.grade,
+              traderId: offer.traderId,
+              traderName: offer.traderName || 'Unknown Trader',
+              offeredPrice: offer.offeredPrice,
+              quantity: offer.quantity,
+              totalAmount: offer.offeredPrice * offer.quantity,
+              status: offer.status,
+              counterPrice: offer.counterPrice,
+              counterQuantity: offer.counterQuantity,
+              counterDate: offer.counterDate,
+              createdAt: offer.createdAt,
+              unitMeasurement: product.unitMeasurement,
+              categoryName: product.categoryId?.categoryName,
+              subCategoryName: product.subCategoryId?.subCategoryName,
+              nearestMarket: product.nearestMarket,
+              deliveryDate: product.deliveryDate
+            });
+          });
+        }
+      });
+    });
+
+    // ========== FETCH ALL ORDERS ==========
+    const Order = require('../models/order');
+    const orders = await Order.find().sort({ createdAt: -1 });
+
+    orders.forEach(order => {
+      // Order creation notification
+      notifications.push({
+        _id: `order_${order._id}`,
+        type: 'order_created',
+        orderId: order.orderId,
+        orderObjectId: order._id,
+        traderId: order.traderId,
+        traderName: order.traderName,
+        farmerId: order.farmerId,
+        farmerName: order.farmerName,
+        orderStatus: order.orderStatus,
+        transporterStatus: order.transporterStatus,
+        traderAcceptedStatus: order.traderAcceptedStatus,
+        farmerAcceptedStatus: order.farmerAcceptedStatus,
+        totalAmount: order.traderToAdminPayment?.totalAmount || 0,
+        paidAmount: order.traderToAdminPayment?.paidAmount || 0,
+        remainingAmount: order.traderToAdminPayment?.remainingAmount || 0,
+        paymentStatus: order.traderToAdminPayment?.paymentStatus || 'pending',
+        createdAt: order.createdAt,
+        message: `New order ${order.orderId} created`
+      });
+
+      // Trader to Admin payment notifications
+      if (order.traderToAdminPayment && order.traderToAdminPayment.paymentHistory) {
+        order.traderToAdminPayment.paymentHistory.forEach(payment => {
+          notifications.push({
+            _id: `trader_payment_${payment._id}`,
+            type: 'trader_payment',
+            orderId: order.orderId,
+            orderObjectId: order._id,
+            paymentId: payment._id,
+            traderId: order.traderId,
+            traderName: order.traderName,
+            amount: payment.amount,
+            paidDate: payment.paidDate,
+            razorpayPaymentId: payment.razorpayPaymentId,
+            razorpayOrderId: payment.razorpayOrderId,
+            createdAt: payment.paidDate,
+            message: `Trader ${order.traderName} paid ₹${payment.amount} for order ${order.orderId}`
+          });
+        });
+      }
+
+      // Admin to Farmer payment notifications
+      if (order.adminToFarmerPayment && order.adminToFarmerPayment.paymentHistory) {
+        order.adminToFarmerPayment.paymentHistory.forEach(payment => {
+          notifications.push({
+            _id: `farmer_payment_${payment._id}`,
+            type: 'farmer_payment',
+            orderId: order.orderId,
+            orderObjectId: order._id,
+            paymentId: payment._id,
+            farmerId: order.farmerId,
+            farmerName: order.farmerName,
+            amount: payment.amount,
+            paidDate: payment.paidDate,
+            razorpayPaymentId: payment.razorpayPaymentId,
+            razorpayOrderId: payment.razorpayOrderId,
+            createdAt: payment.paidDate,
+            message: `Payment of ₹${payment.amount} sent to farmer ${order.farmerName} for order ${order.orderId}`
+          });
+        });
+      }
+
+      // Transporter status notifications
+      if (order.transporterStatus !== 'pending') {
+        notifications.push({
+          _id: `transporter_${order._id}`,
+          type: 'transporter_update',
+          orderId: order.orderId,
+          orderObjectId: order._id,
+          transporterStatus: order.transporterStatus,
+          transporterDetails: order.transporterDetails,
+          createdAt: order.transporterDetails?.acceptedAt || order.updatedAt,
+          message: `Transporter ${order.transporterStatus} for order ${order.orderId}`
+        });
+      }
+    });
+
+    // Sort all notifications by date, newest first
+    notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.status(200).json({
+      success: true,
+      totalCount: notifications.length,
+      data: notifications
+    });
+  } catch (error) {
+    console.error('Error fetching admin notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+// Update purchase quantity
+exports.updatePurchaseQuantity = async (req, res) => {
+  try {
+    const { productId, gradeId, purchaseId, newQuantity } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    const grade = product.gradePrices.id(gradeId);
+    if (!grade) {
+      return res.status(404).json({ success: false, message: "Grade not found" });
+    }
+
+    const purchase = grade.purchaseHistory.id(purchaseId);
+    if (!purchase) {
+      return res.status(404).json({ success: false, message: "Purchase not found" });
+    }
+
+    // Check if already ordered
+    if (purchase.orderCreated) {
+      return res.status(400).json({ success: false, message: "Cannot modify - order already created" });
+    }
+
+    const quantityDiff = newQuantity - purchase.quantity;
+
+    // Validate new quantity
+    if (newQuantity <= 0) {
+      return res.status(400).json({ success: false, message: "Quantity must be greater than 0" });
+    }
+
+    // Check available quantity
+    const availableQty = grade.totalQty + purchase.quantity;
+    if (newQuantity > availableQty) {
+      return res.status(400).json({ success: false, message: "Insufficient quantity available" });
+    }
+if (grade.quantityType === 'bulk') {
+  return res.status(400).json({ 
+    success: false, 
+    message: "Cannot modify bulk purchase quantity" 
+  });
+}
+    // Update purchase
+    purchase.quantity = newQuantity;
+    purchase.totalAmount = purchase.pricePerUnit * newQuantity;
+
+    // Update grade quantity
+    grade.totalQty -= quantityDiff;
+
+    await product.save();
+
+    res.status(200).json({ success: true, message: "Quantity updated successfully", data: purchase });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Remove purchase from cart
+exports.removePurchase = async (req, res) => {
+  try {
+    const { productId, gradeId, purchaseId } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    const grade = product.gradePrices.id(gradeId);
+    if (!grade) {
+      return res.status(404).json({ success: false, message: "Grade not found" });
+    }
+
+    const purchase = grade.purchaseHistory.id(purchaseId);
+    if (!purchase) {
+      return res.status(404).json({ success: false, message: "Purchase not found" });
+    }
+
+    // Check if already ordered
+    if (purchase.orderCreated) {
+      return res.status(400).json({ success: false, message: "Cannot remove - order already created" });
+    }
+
+    // Return quantity back to grade
+    grade.totalQty += purchase.quantity;
+
+    // Update status if needed
+    if (grade.status === 'sold') {
+      grade.status = grade.totalQty === 0 ? 'sold' : 'partially_sold';
+    }
+
+    // Remove purchase
+   grade.purchaseHistory.pull(purchaseId); // ✅ CHANGE THIS LINE
+
+    await product.save();
+
+    res.status(200).json({ success: true, message: "Purchase removed successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

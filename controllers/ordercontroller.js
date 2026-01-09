@@ -559,8 +559,8 @@ const productItems = await Promise.all(
     const remainingAmount = finalTotalAmount - finalPaidAmount;
 
     // Determine payment status
-    let paymentStatus = "pending";
-    if (finalPaidAmount >= finalTotalAmount) {
+   let paymentStatus = "pending";
+    if (order.traderToAdminPayment.remainingAmount <= 0) {
       paymentStatus = "paid";
     } else if (finalPaidAmount > 0) {
       paymentStatus = "partial";
@@ -579,6 +579,13 @@ const productItems = await Promise.all(
             },
           ]
         : [];
+
+        let traderDeliveryKey = null;
+    if (paymentStatus === "paid") {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      traderDeliveryKey = `TRADER${rand}`;
+      console.log("✅ Trader Key Generated at Creation:", traderDeliveryKey);
+    }
 
     // Create order
     const newOrder = new Order({
@@ -877,8 +884,23 @@ exports.getFarmerOrders = async (req, res) => {
 exports.getTraderOrders = async (req, res) => {
   try {
     const { traderId } = req.params;
-
     const orders = await Order.find({ traderId }).sort({ createdAt: -1 });
+
+    // ✅ AUTO-GENERATE KEY IF PAYMENT IS PAID BUT KEY MISSING
+    let updated = false;
+
+    for (let order of orders) {
+      if (
+        order.traderToAdminPayment?.paymentStatus === "paid" &&
+        !order.traderDeliveryKey
+      ) {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        order.traderDeliveryKey = `TRADER${rand}`;
+        updated = true;
+        console.log("✅ Auto fixed missing trader key:", order.orderId);
+        await order.save();
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -894,6 +916,8 @@ exports.getTraderOrders = async (req, res) => {
     });
   }
 };
+
+
 
 // Get single order
 exports.getOrderById = async (req, res) => {
@@ -963,6 +987,16 @@ exports.addPaymentToOrder = async (req, res) => {
       razorpayOrderId,
       razorpaySignature,
     });
+
+    // ✅ AUTO GENERATE TRADER DELIVERY KEY WHEN PAYMENT BECOMES PAID
+    if (
+      order.traderToAdminPayment.paymentStatus === "paid" &&
+      !order.traderDeliveryKey
+    ) {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      order.traderDeliveryKey = `TRADER${rand}`;
+      console.log("✅ Trader Delivery Key Generated:", order.traderDeliveryKey);
+    }
 
     order.updatedAt = Date.now();
     await order.save();

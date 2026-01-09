@@ -61,5 +61,6 @@ router.post('/mark-all-notifications-read', productController.markAllNotificatio
 router.get('/trader-notifications/:traderId', productController.getTraderNotifications);
 router.post('/mark-trader-notification-read', productController.markTraderNotificationAsRead);
 router.post('/mark-all-trader-notifications-read', productController.markAllTraderNotificationsAsRead);
-
+router.put('/purchase/update-quantity', productController.updatePurchaseQuantity);
+router.delete('/purchase/remove', productController.removePurchase);
 module.exports = router;

@@ -29,17 +29,18 @@ const express = require("express");
 const router = express.Router();
 const orderController = require("../controllers/ordercontroller");
 const Order = require("../models/order");
+const markettotradertransport = require("../controllers/markettotradertransport");
 // Get pending orders for farmer (trader accepted, farmer not accepted)
 // router.get('/farmer-pending/:farmerId', async (req, res) => {
 //   try {
-//     const { farmerId } = req.params;
-    
+//     const { farmerId } = req.params;const markettotradertransport = require("../controllers/markettotradertransport");
+
 //     const pendingOrders = await Order.find({
 //       farmerId: farmerId,
 //       traderAcceptedStatus: true,
 //       farmerAcceptedStatus: false
 //     }).sort({ createdAt: -1 });
-    
+
 //     res.json({
 //       success: true,
 //       orders: pendingOrders
@@ -56,24 +57,24 @@ const Order = require("../models/order");
 router.get('/farmer-pending/:farmerId', async (req, res) => {
   try {
     const { farmerId } = req.params;
-    
+
     // Get existing pending orders
     const pendingOrders = await Order.find({
       farmerId: farmerId,
       traderAcceptedStatus: true,
       farmerAcceptedStatus: false
     }).sort({ createdAt: -1 });
-    
+
     // 🔥 GET PRODUCTS WITH PENDING PURCHASE HISTORY
     const Product = require('../models/product');
-    
+
     const productsWithPendingPurchases = await Product.find({
       farmerId: farmerId,
       'gradePrices.purchaseHistory.orderCreated': false
     })
     .populate('categoryId')
     .populate('subCategoryId');
-    
+
     res.json({
       success: true,
       orders: pendingOrders,
@@ -134,4 +135,19 @@ router.patch("/:orderId/status", orderController.updateOrderStatus);
 // Get all orders (admin)
 router.get("/", orderController.getAllOrders);
 
+// Transport routes under same /api/orders
+router.get("/market-to-trader/eligible", markettotradertransport.getEligibleOrdersForTransporter);
+router.post("/market-to-trader/accept", markettotradertransport.acceptTransportOffer);
+router.post("/market-to-trader/reject", markettotradertransport.rejectTransportOffer); // FIXED: was markettotradertransportrejectTransportOffer
+router.post("/market-to-trader/start-journey", markettotradertransport.startJourney);
+router.post("/market-to-trader/complete-journey", markettotradertransport.completeJourney);
+router.get("/market-to-trader/admin", markettotradertransport.getAdminTransportOrders);
+router.post("/market-to-trader/admin/assign", markettotradertransport.assignTransporter);
+router.post("/market-to-trader/admin/expire-key", markettotradertransport.expireKey);
+router.get("/trader/:traderId/transport", markettotradertransport.getTraderTransportOrders);
+router.post("/market-to-trader/trader/generate-key", markettotradertransport.generateDeliveryKey);
+router.get("/locations/pickup", markettotradertransport.getPickupLocationDetails);
+router.get("/locations/delivery/:traderId", markettotradertransport.getDeliveryLocationDetails);
+// Add this line in orderRoutes.js
+router.get('/transporter/:transporterId/accepted', markettotradertransport.getTransporterAcceptedOrders);
 module.exports = router;

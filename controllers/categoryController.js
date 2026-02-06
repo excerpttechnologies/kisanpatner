@@ -40,18 +40,48 @@ exports.getAll = async (req, res) => {
 };
 
 // UPDATE
+// exports.updateCategory = async (req, res) => {
+//   try {
+//     const updated = await Category.findByIdAndUpdate(
+//       req.params.id,
+//       { categoryName: req.body.categoryName },
+//       { new: true }
+//     );
+//     res.json({ success: true, data: updated });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+//kavana code
+
+
 exports.updateCategory = async (req, res) => {
   try {
+    const updateData = {
+      categoryName: req.body.categoryName,
+    };
+
+    // only update image if new one uploaded
+    if (req.file && req.file.filename) {
+      updateData.image = req.file.filename;
+    }
+
     const updated = await Category.findByIdAndUpdate(
       req.params.id,
-      { categoryName: req.body.categoryName },
+      updateData,
       { new: true }
     );
+
     res.json({ success: true, data: updated });
   } catch (err) {
+    console.error("UPDATE ERROR:", err); // <-- this will show real reason
     res.status(500).json({ message: err.message });
   }
 };
+
+
+
 
 // DELETE
 exports.deleteCategory = async (req, res) => {

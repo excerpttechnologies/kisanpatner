@@ -446,7 +446,7 @@ const Product = require("../models/product");
 //         {
 //           arrayFilters: [
 //             { "grade.grade": item.grade },
-//             { 
+//             {
 //               "purchase.traderId": traderId,
 //               "purchase.quantity": item.quantity,
 //               "purchase.pricePerUnit": item.pricePerUnit,
@@ -496,7 +496,6 @@ const Product = require("../models/product");
 //   }
 // };
 // FIXED createOrder function in orderController.js
-
 exports.createOrder = async (req, res) => {
   try {
     const {
@@ -537,12 +536,12 @@ exports.createOrder = async (req, res) => {
 const productItems = await Promise.all(
   cartItems.map(async (item) => {
     const product = await Product.findOne({ productId: item.productId });
-    
+
     return {
       productId: item.productId,
       farmerId: item.farmerId,
       grade: item.grade,
-      deliveryDate: item.deliveryDate,
+      deliveryDate: product.deliveryDate,
       quantity: item.quantity,
       pricePerUnit: item.pricePerUnit,
       totalAmount: item.quantity * item.pricePerUnit,
@@ -550,6 +549,7 @@ const productItems = await Promise.all(
     };
   })
 );
+console.log("product items order", productItems)
     const calculatedTotal = productItems.reduce(
       (sum, item) => sum + item.totalAmount,
       0
@@ -559,8 +559,8 @@ const productItems = await Promise.all(
     const remainingAmount = finalTotalAmount - finalPaidAmount;
 
     // Determine payment status
-   let paymentStatus = "pending";
-    if (order.traderToAdminPayment.remainingAmount <= 0) {
+    let paymentStatus = "pending";
+    if (finalPaidAmount >= finalTotalAmount) {
       paymentStatus = "paid";
     } else if (finalPaidAmount > 0) {
       paymentStatus = "partial";
@@ -579,13 +579,6 @@ const productItems = await Promise.all(
             },
           ]
         : [];
-
-        let traderDeliveryKey = null;
-    if (paymentStatus === "paid") {
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      traderDeliveryKey = `TRADER${rand}`;
-      console.log("✅ Trader Key Generated at Creation:", traderDeliveryKey);
-    }
 
     // Create order
     const newOrder = new Order({
@@ -621,7 +614,7 @@ const productItems = await Promise.all(
           $set: {
             "gradePrices.$[grade].purchaseHistory.$[purchase].orderCreated": true,
             "gradePrices.$[grade].purchaseHistory.$[purchase].orderId": newOrder.orderId,
-            "gradePrices.$[grade].purchaseHistory.$[purchase].paymentStatus": 
+            "gradePrices.$[grade].purchaseHistory.$[purchase].paymentStatus":
               paymentStatus === "paid" ? "paid" : "pending",
             "gradePrices.$[grade].purchaseHistory.$[purchase].razorpayPaymentId": razorpayPaymentId,
             "gradePrices.$[grade].purchaseHistory.$[purchase].razorpayOrderId": razorpayOrderId,
@@ -630,7 +623,7 @@ const productItems = await Promise.all(
         {
           arrayFilters: [
             { "grade.grade": item.grade },
-            { 
+            {
               "purchase.traderId": traderId,
               "purchase.quantity": item.quantity,
               "purchase.pricePerUnit": item.pricePerUnit,
@@ -655,6 +648,7 @@ const productItems = await Promise.all(
       message: "Failed to create order",
       error: error.message,
     });
+
   }
 };
 // Farmer accepts order and adds admin to farmer payment
@@ -816,14 +810,14 @@ exports.farmerAcceptOrder = async (req, res) => {
     // 🔥 NEW: Mark purchase history as orderCreated = true (if provided)
     if (purchaseHistoryId && productId && gradeId) {
       const Product = require('../models/product');
-      
+
       await Product.updateOne(
-        { 
+        {
           _id: productId,
           'gradePrices._id': gradeId
         },
-        { 
-          $set: { 
+        {
+          $set: {
             'gradePrices.$[grade].purchaseHistory.$[purchase].orderCreated': true,
             'gradePrices.$[grade].purchaseHistory.$[purchase].orderId': order.orderId
           }
@@ -1149,15 +1143,16 @@ exports.transporterAcceptOrder = async (req, res) => {
     const { transporterDetails } = req.body;
 
     const order = await Order.findOne({ orderId });
-    
+
     if (!order) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Order not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
       });
     }
 
     order.transporterStatus = "accepted";
+    order.markettotradertransport="accept";
     order.transporterDetails = transporterDetails;
     order.updatedAt = Date.now();
 
@@ -1170,9 +1165,9 @@ exports.transporterAcceptOrder = async (req, res) => {
     });
   } catch (err) {
     console.error("Transporter accept error:", err);
-    res.status(500).json({ 
-      success: false, 
-      message: "Server error" 
+    res.status(500).json({
+      success: false,
+      message: "Server error"
     });
   }
 };
@@ -1183,18 +1178,18 @@ exports.adminSelectTransporter = async (req, res) => {
     const { orderId } = req.params;
 
     const order = await Order.findOne({ orderId });
-    
+
     if (!order) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Order not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
       });
     }
 
     if (!order.transporterDetails) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "No transporter accepted yet" 
+      return res.status(400).json({
+        success: false,
+        message: "No transporter accepted yet"
       });
     }
 
@@ -1216,9 +1211,9 @@ exports.adminSelectTransporter = async (req, res) => {
     });
   } catch (err) {
     console.error("Admin select transporter error:", err);
-    res.status(500).json({ 
-      success: false, 
-      message: "Server error" 
+    res.status(500).json({
+      success: false,
+      message: "Server error"
     });
   }
 };
@@ -1230,38 +1225,38 @@ exports.transporterStartJourney = async (req, res) => {
     const { pickupKey } = req.body;
 
     const order = await Order.findOne({ orderId });
-    
+
     if (!order) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Order not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
       });
     }
 
     // ✅ VERIFY ADMIN PICKUP KEY
     if (order.adminPickupKey !== pickupKey) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid pickup key" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid pickup key"
       });
     }
 
     order.transporterStatus = "started";
     order.orderStatus = "in_transit";
     order.updatedAt = Date.now();
-    
+
     await order.save();
 
-    res.json({ 
-      success: true, 
-      message: "Journey started successfully", 
-      data: order 
+    res.json({
+      success: true,
+      message: "Journey started successfully",
+      data: order
     });
   } catch (err) {
     console.error("Start journey error:", err);
-    res.status(500).json({ 
-      success: false, 
-      message: "Server error" 
+    res.status(500).json({
+      success: false,
+      message: "Server error"
     });
   }
 };
@@ -1273,27 +1268,27 @@ exports.completeDeliveryByTransporter = async (req, res) => {
     const { traderKey } = req.body;
 
     const order = await Order.findOne({ orderId });
-    
+
     if (!order) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Order not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
       });
     }
 
     // ✅ CHECK IF TRADER DELIVERY KEY IS GENERATED
     if (!order.traderDeliveryKey) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Trader delivery key not generated yet. Payment must be completed first." 
+      return res.status(400).json({
+        success: false,
+        message: "Trader delivery key not generated yet. Payment must be completed first."
       });
     }
 
     // ✅ VERIFY TRADER DELIVERY KEY
     if (order.traderDeliveryKey !== traderKey) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid trader delivery key" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid trader delivery key"
       });
     }
 
@@ -1317,10 +1312,10 @@ exports.completeDeliveryByTransporter = async (req, res) => {
 
   } catch (err) {
     console.error("Complete delivery error:", err);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: "Server error",
-      error: err.message 
+      error: err.message
     });
   }
 };

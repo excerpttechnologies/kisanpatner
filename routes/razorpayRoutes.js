@@ -14,9 +14,9 @@
 // router.post('/create-order', async (req, res) => {
 //   try {
 //     console.log('📦 Received order request:', req.body);
-    
+
 //     const { userId } = req.body;
-    
+
 //     if (!userId) {
 //       console.log('❌ No userId provided');
 //       return res.status(400).json({
@@ -26,12 +26,12 @@
 //     }
 
 //     console.log('🔍 Finding cart for user:', userId);
-    
+
 //     // Get user's cart
 //     const cart = await CropCareCart.findOne({ userId });
-    
+
 //     console.log('🛒 Cart found:', cart ? `${cart.items.length} items, total: ₹${cart.total}` : 'No cart');
-    
+
 //     if (!cart || cart.items.length === 0) {
 //       return res.status(400).json({
 //         success: false,
@@ -53,7 +53,7 @@
 //     };
 
 //     const order = await razorpay.orders.create(options);
-    
+
 //     console.log('✅ Razorpay order created:', order.id);
 
 //     res.status(200).json({
@@ -148,9 +148,9 @@ const razorpay = new Razorpay({
 router.post('/create-order', async (req, res) => {
   try {
     console.log('📦 Received order request:', req.body);
-    
+
     const { userId } = req.body;
-    
+
     if (!userId) {
       console.log('❌ No userId provided');
       return res.status(400).json({
@@ -160,12 +160,12 @@ router.post('/create-order', async (req, res) => {
     }
 
     console.log('🔍 Finding cart for user:', userId);
-    
+
     // Get user's cart
     const cart = await CropCareCart.findOne({ userId });
-    
+
     console.log('🛒 Cart found:', cart ? `${cart.items.length} items, total: ₹${cart.total}` : 'No cart');
-    
+
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({
         success: false,
@@ -187,7 +187,7 @@ router.post('/create-order', async (req, res) => {
     };
 
     const order = await razorpay.orders.create(options);
-    
+
     console.log('✅ Razorpay order created:', order.id);
 
     res.status(200).json({
@@ -236,14 +236,14 @@ router.post('/verify', async (req, res) => {
 
     // Verify signature
     if (expectedSignature === razorpay_signature) {
-      
+
       // Get cart from Razorpay order notes
       const razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
       const userId = razorpayOrder.notes.userId;
-      
+
       // Get user's cart
       const cart = await CropCareCart.findOne({ userId });
-      
+
       if (!cart) {
         return res.status(404).json({
           success: false,
@@ -272,11 +272,11 @@ router.post('/verify', async (req, res) => {
       });
 
       await newOrder.save();
-      
+
       // Clear the cart
       await CropCareCart.findOneAndUpdate(
         { userId },
-        { 
+        {
           items: [],
           subtotal: 0,
           gst: 0,
@@ -315,10 +315,10 @@ router.post('/verify', async (req, res) => {
 router.get('/orders/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     const orders = await CropcareOrder.find({ userId })
       .sort({ createdAt: -1 }); // Latest first
-    
+
     res.status(200).json({
       success: true,
       message: 'Orders fetched successfully',

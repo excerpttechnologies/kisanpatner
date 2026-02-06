@@ -1,3 +1,6 @@
+//vps
+
+
 const Order = require("../models/order");
 const Product = require("../models/product");
 
@@ -323,9 +326,9 @@ exports.updateTransportationVerification = async (req, res) => {
 exports.getOrderDetails = async (req, res) => {
   try {
     const { orderId } = req.params;
-    
+
     const order = await Order.findOne({ orderId });
-    
+
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -337,7 +340,7 @@ exports.getOrderDetails = async (req, res) => {
     const productItemsWithGrades = await Promise.all(
       order.productItems.map(async (item) => {
         const product = await Product.findOne({ productId: item.productId });
-        
+
         return {
           ...item.toObject(),
           availableGrades: product ? product.gradePrices.map(gp => ({
@@ -379,7 +382,7 @@ exports.getOrderDetails = async (req, res) => {
 //     } = req.body;
 
 //     const order = await Order.findOne({ orderId });
-    
+
 //     if (!order) {
 //       return res.status(404).json({
 //         success: false,
@@ -389,12 +392,12 @@ exports.getOrderDetails = async (req, res) => {
 
 //     // Calculate totals
 //     let productTotal = 0;
-    
+
 //     // Update product items
 //     order.productItems = productItems.map(item => {
 //       const itemTotal = item.pricePerUnit * item.quantity;
 //       productTotal += itemTotal;
-      
+
 //       return {
 //         ...item,
 //         totalAmount: itemTotal
@@ -429,7 +432,7 @@ exports.getOrderDetails = async (req, res) => {
 //     // Update traderToAdminPayment
 //     order.traderToAdminPayment = {
 //       totalAmount: traderTotal,
-    
+
 //       remainingAmount: traderTotal,
 //       paymentStatus: 'pending',
 //       paymentHistory: [],
@@ -440,7 +443,7 @@ exports.getOrderDetails = async (req, res) => {
 //     };
 
 //     order.updatedAt = new Date();
-    
+
 //     await order.save();
 
 //     res.status(200).json({
@@ -471,7 +474,7 @@ exports.updateOrderDetails = async (req, res) => {
     } = req.body;
 
     const order = await Order.findOne({ orderId });
-    
+
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -481,12 +484,12 @@ exports.updateOrderDetails = async (req, res) => {
 
     // Calculate totals
     let productTotal = 0;
-    
+
     // Update product items
     order.productItems = productItems.map(item => {
       const itemTotal = item.pricePerUnit * item.quantity;
       productTotal += itemTotal;
-      
+
       return {
         ...item,
         totalAmount: itemTotal
@@ -496,13 +499,13 @@ exports.updateOrderDetails = async (req, res) => {
     // ============ TRADER TO ADMIN PAYMENT ============
     // Get existing paid amount from payment history
     const existingTraderPaidAmount = order.traderToAdminPayment.paidAmount || 0;
-    
+
     // Calculate new trader total
     const newTraderTotal = productTotal + (traderLabourFee || 0) + (traderTransportFee || 0);
-    
+
     // Calculate remaining = newTotal - alreadyPaid
     const traderRemaining = newTraderTotal - existingTraderPaidAmount;
-    
+
     // Determine payment status
     let traderPaymentStatus = 'pending';
     if (existingTraderPaidAmount >= newTraderTotal) {
@@ -527,14 +530,14 @@ exports.updateOrderDetails = async (req, res) => {
     // ============ ADMIN TO FARMER PAYMENT ============
     // Get existing farmer paid amount
     const existingFarmerPaidAmount = order.adminToFarmerPayment?.paidAmount || 0;
-    
+
     // Calculate new farmer total
     const newFarmerTotal = productTotal - (farmerLabourFee || 0) - (farmerTransportFee || 0);
-    
+
     // If advance is provided, use it; otherwise use existing paid amount
     const farmerPaidAmount = advanceAmount !== undefined ? advanceAmount : existingFarmerPaidAmount;
     const farmerRemaining = newFarmerTotal - farmerPaidAmount;
-    
+
     // Determine farmer payment status
     let farmerPaymentStatus = 'pending';
     if (farmerPaidAmount >= newFarmerTotal) {
@@ -558,11 +561,11 @@ exports.updateOrderDetails = async (req, res) => {
     };
 
     order.updatedAt = new Date();
-    
+
     // Mark as modified for nested objects
     order.markModified('traderToAdminPayment');
     order.markModified('adminToFarmerPayment');
-    
+
     await order.save();
 
     res.status(200).json({
@@ -601,7 +604,7 @@ exports.recordFarmerPayment = async (req, res) => {
     }
 
     const order = await Order.findOne({ orderId });
-    
+
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -651,7 +654,7 @@ exports.recordFarmerPayment = async (req, res) => {
     order.adminToFarmerPayment.paidAmount = newPaidAmount;
     order.adminToFarmerPayment.remainingAmount = newRemainingAmount;
     order.adminToFarmerPayment.paymentStatus = paymentStatus;
-    
+
     // Add to payment history
     if (!order.adminToFarmerPayment.paymentHistory) {
       order.adminToFarmerPayment.paymentHistory = [];
@@ -659,10 +662,10 @@ exports.recordFarmerPayment = async (req, res) => {
     order.adminToFarmerPayment.paymentHistory.push(paymentRecord);
 
     order.updatedAt = new Date();
-    
+
     // Mark as modified for nested objects
     order.markModified('adminToFarmerPayment');
-    
+
     await order.save();
 
     res.status(200).json({

@@ -87,8 +87,8 @@ const path = require("path");
 const history = require('connect-history-api-fallback');
 
 const app = express();
-
-// =======================
+const cropcareCartRoutes = require('./routes/cropcareCartRoutes');
+const razorpayRoutes = require('./routes/razorpayRoutes');
 // Middlewares
 // =======================
 app.use(cors());
@@ -116,7 +116,8 @@ app.use("/subcategory", require("./routes/subcategory"));
 // =======================
 app.use('/crop', require('./routes/cropRoutes'));
 app.use('/tracking', require('./routes/trackingRoutes'));
-
+app.use('/api/cropcare', cropcareCartRoutes);
+app.use('/api/payment', razorpayRoutes);
 // Safety-net: tracking fallback
 try {
   const trackingController = require('./controllers/trackingController');
@@ -131,7 +132,8 @@ try {
 // =======================
 app.use("/farmer/register", require("./routes/farmerRoutes"));
 app.use("/farmer", require("./routes/authroutes"));
-
+app.use('/api/cropcare', cropcareCartRoutes);
+app.use('/api/payment', razorpayRoutes);
 // =======================
 // Product
 // =======================
@@ -140,7 +142,7 @@ app.use('/product', require('./routes/productRoutes'));
 // =======================
 // Transport & Payment
 // =======================
-app.use('/transport', require('./routes/transportRoutes'));
+//app.use('/transport', require('./routes/transportRoutes'));
 app.use('/payment', require('./routes/traderpaymentroutes'));
 
 // =======================

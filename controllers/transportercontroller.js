@@ -1,6 +1,6 @@
 const Order = require("../models/order");
 const Product = require("../models/product");
-const Market = require("../models/market");
+const Market = require("../models/Market");
 const Transporter = require('../models/Transporter');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
@@ -621,7 +621,7 @@ exports.updateProfile = async (req, res) => {
 
     // Handle personalInfo - check both nested and flat formats
     const personalInfo = updateData.personalInfo || updateData;
-    
+
     if (personalInfo) {
       // Don't allow mobile number updates
       if (personalInfo.mobileNo && personalInfo.mobileNo !== existingTransporter.personalInfo.mobileNo) {
@@ -632,9 +632,9 @@ exports.updateProfile = async (req, res) => {
       }
 
       // Update personalInfo fields
-      const personalFields = ['name', 'email', 'address', 'villageGramaPanchayat', 
+      const personalFields = ['name', 'email', 'address', 'villageGramaPanchayat',
                              'pincode', 'state', 'district', 'taluk', 'post', 'location'];
-      
+
       personalFields.forEach(field => {
         if (personalInfo[field] !== undefined && field !== 'mobileNo') {
           updateObject[`personalInfo.${field}`] = personalInfo[field];
@@ -644,7 +644,7 @@ exports.updateProfile = async (req, res) => {
 
     // Handle transportInfo - check both nested and flat formats
     const transportInfo = updateData.transportInfo || {};
-    
+
     if (Object.keys(transportInfo).length > 0) {
       // If updating vehicle number, check if it's already taken
       if (transportInfo.vehicleNumber) {
@@ -666,7 +666,7 @@ exports.updateProfile = async (req, res) => {
 
       // Update transportInfo fields
       const transportFields = ['vehicleType', 'vehicleNumber'];
-      
+
       transportFields.forEach(field => {
         if (transportInfo[field] !== undefined) {
           updateObject[`transportInfo.${field}`] = transportInfo[field];
@@ -686,7 +686,7 @@ exports.updateProfile = async (req, res) => {
       // Handle driverInfo
       if (transportInfo.driverInfo) {
         const driverFields = ['driverName', 'driverMobileNo', 'driverAge'];
-        
+
         driverFields.forEach(field => {
           if (transportInfo.driverInfo[field] !== undefined) {
             updateObject[`transportInfo.driverInfo.${field}`] = transportInfo.driverInfo[field];
@@ -697,11 +697,11 @@ exports.updateProfile = async (req, res) => {
 
     // Handle bankDetails - check both nested and flat formats
     const bankDetails = updateData.bankDetails || {};
-    
+
     if (Object.keys(bankDetails).length > 0) {
-      const bankFields = ['accountHolderName', 'bankName', 'accountNumber', 
+      const bankFields = ['accountHolderName', 'bankName', 'accountNumber',
                          'ifscCode', 'branch', 'upiId'];
-      
+
       bankFields.forEach(field => {
         if (bankDetails[field] !== undefined) {
           updateObject[`bankDetails.${field}`] = bankDetails[field];
@@ -711,12 +711,12 @@ exports.updateProfile = async (req, res) => {
 
     // Handle documents - check both nested and flat formats
     const documents = updateData.documents || {};
-    
+
     if (Object.keys(documents).length > 0) {
-      const documentFields = ['panCard', 'aadharFront', 'aadharBack', 
-                             'bankPassbook', 'rcBook', 'insuranceDoc', 
+      const documentFields = ['panCard', 'aadharFront', 'aadharBack',
+                             'bankPassbook', 'rcBook', 'insuranceDoc',
                              'pollutionCert', 'permitDoc', 'driverLicense'];
-      
+
       documentFields.forEach(field => {
         if (documents[field] !== undefined) {
           updateObject[`documents.${field}`] = documents[field];
@@ -725,15 +725,15 @@ exports.updateProfile = async (req, res) => {
     }
 
     // Handle direct file paths in request body (for backward compatibility)
-    const fileFields = ['rcBook', 'insuranceDoc', 'pollutionCert', 'permitDoc', 
-                       'driverLicense', 'driverPhoto', 'panCard', 
+    const fileFields = ['rcBook', 'insuranceDoc', 'pollutionCert', 'permitDoc',
+                       'driverLicense', 'driverPhoto', 'panCard',
                        'aadharFront', 'aadharBack', 'bankPassbook'];
-    
+
     fileFields.forEach(field => {
       if (updateData[field] !== undefined) {
         // Update in documents
         updateObject[`documents.${field}`] = updateData[field];
-        
+
         // Also update in appropriate nested location
         if (['rcBook', 'insuranceDoc', 'pollutionCert', 'permitDoc'].includes(field)) {
           updateObject[`transportInfo.vehicleDocuments.${field}`] = updateData[field];
@@ -1865,7 +1865,7 @@ exports.getTransporterOrders = async (req, res) => {
         const enrichedProductItems = await Promise.all(
           order.productItems.map(async (item) => {
             const product = await Product.findOne({
-              productId: item.productId,
+             productId: item.productId,
             })
               .populate("categoryId", "categoryName")
               .populate("subCategoryId", "subCategoryName");
@@ -1890,24 +1890,24 @@ exports.getTransporterOrders = async (req, res) => {
                     postOffice: marketDetails.postOffice,
                     district: marketDetails.district,
                     state: marketDetails.state,
-                    exactAddress: marketDetails.exactAddress,
-                    landmark: marketDetails.landmark,
+              exactAddress: marketDetails.exactAddress,
+                 landmark: marketDetails.landmark,
                   }
                 : null,
-            };
-          })
+        };
+       })
         );
 
         return {
           ...order.toObject(),
-          productItems: enrichedProductItems,
-        };
-      })
+    productItems: enrichedProductItems,
+    };
+    })
     );
 
     res.status(200).json({
-      success: true,
-      count: enrichedOrders.length,
+     success: true,
+     count: enrichedOrders.length,
       data: enrichedOrders,
     });
   } catch (error) {
@@ -1919,7 +1919,6 @@ exports.getTransporterOrders = async (req, res) => {
     });
   }
 };
-
 // Mark order as completed (optional - for future use)
 exports.completeOrder = async (req, res) => {
   try {

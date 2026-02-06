@@ -59,20 +59,50 @@ exports.getSubCategoriesByCategory = async (req, res) => {
 };
 
 // UPDATE
+// exports.updateSub = async (req, res) => {
+//   try {
+//     const updated = await SubCategory.findByIdAndUpdate(
+//       req.params.id,
+//       { subCategoryName: req.body.subCategoryName },
+//       { new: true }
+//     );
+
+//     res.json({ success: true, data: updated });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };\\
+
+
+//kavana code
+
+
 exports.updateSub = async (req, res) => {
   try {
+    const updateData = {
+      subCategoryName: req.body.subCategoryName,
+    };
+
+    // update image only if new one uploaded
+    if (req.file && req.file.filename) {
+      updateData.image = req.file.filename;
+    }
+
     const updated = await SubCategory.findByIdAndUpdate(
       req.params.id,
-      { subCategoryName: req.body.subCategoryName },
+      updateData,
       { new: true }
     );
 
     res.json({ success: true, data: updated });
 
   } catch (err) {
+    console.error("UPDATE SUB ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // DELETE
 exports.deleteSub = async (req, res) => {

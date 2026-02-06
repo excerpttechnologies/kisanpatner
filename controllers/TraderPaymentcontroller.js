@@ -88,7 +88,7 @@ exports.verifyPayment = async (req, res) => {
       if (transporter) {
         // Get primary vehicle or first vehicle
         const primaryVehicle = transporter.getPrimaryVehicle();
-        
+
         transporterDetails = {
           transporterId: transporter._id,
           transporterName: transporter.personalInfo.name,
@@ -123,12 +123,12 @@ exports.verifyPayment = async (req, res) => {
           purchase.razorpayPaymentId = razorpay_payment_id;
           purchase.razorpayOrderId = razorpay_order_id;
           purchase.paymentDate = new Date();
-          
+
           // Add transporter details
           if (transporterDetails) {
             purchase.transporter = transporterDetails;
           }
-          
+
           purchaseUpdated = true;
         }
       });

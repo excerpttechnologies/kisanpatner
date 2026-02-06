@@ -1,29 +1,30 @@
 const Farmer = require('../models/Farmer');
 const bcrypt = require('bcryptjs');
 const path = require('path');
-
+const Order = require('../models/order');
 
 
 
 const generateNextId = async (role) => {
   const prefix = role === 'farmer' ? 'far' : 'trd';
-  
-  // Find the last registered user with this role
-  const lastUser = await Farmer.findOne({ 
-    farmerId: new RegExp(`^${prefix}-`) 
+  const fieldName = role === 'farmer' ? 'farmerId' : 'traderId';
+
+  // Find the last registered user with this role - using correct field
+  const lastUser = await Farmer.findOne({
+    [fieldName]: new RegExp(`^${prefix}-`)
   })
-  .sort({ farmerId: -1 })
-  .select('farmerId');
-  
+  .sort({ [fieldName]: -1 })
+  .select(fieldName);
+
   if (!lastUser) {
     // First user of this role
     return `${prefix}-01`;
   }
-  
+
   // Extract the number from the last ID
-  const lastNumber = parseInt(lastUser.farmerId.split('-')[1]);
+  const lastNumber = parseInt(lastUser[fieldName].split('-')[1]);
   const nextNumber = lastNumber + 1;
-  
+
   // Pad with zeros to maintain format
   return `${prefix}-${String(nextNumber).padStart(2, '0')}`;
 };
@@ -54,17 +55,17 @@ exports.registerFarmer = async (req, res) => {
     const parsedFarmLocation = JSON.parse(farmLocation);
     const parsedFarmLand = JSON.parse(farmLand);
     const parsedCommodities = JSON.parse(commodities);
- 
+
     const parsedBankDetails = JSON.parse(bankDetails);
     const parsedSecurity = JSON.parse(security);
 const parsedSubcategories = JSON.parse(req.body.subcategories || '[]');
 const parsedNearestMarkets = JSON.parse(nearestMarkets);  // This should now be an array of IDs
 
     // Check if farmer already exists
-    const existingFarmer = await Farmer.findOne({ 
-      'personalInfo.mobileNo': parsedPersonalInfo.mobileNo 
+    const existingFarmer = await Farmer.findOne({
+      'personalInfo.mobileNo': parsedPersonalInfo.mobileNo
     });
-    
+
     if (existingFarmer) {
       return res.status(400).json({
         success: false,
@@ -93,7 +94,7 @@ if (req.files) {
   if (req.files.aadharBack) {
     documents.aadharBack = `/uploads/${req.files.aadharBack[0].filename}`;
   }
-  
+
   if (role === 'farmer') {
     if (req.files.bankPassbook) {
       documents.bankPassbook = `/uploads/${req.files.bankPassbook[0].filename}`;
@@ -118,13 +119,13 @@ if (req.files) {
       farmLocation: parsedFarmLocation,
       farmLand: parsedFarmLand,
       role: role,
-   
-   
+
+
       commodities: parsedCommodities,
   subcategories: parsedSubcategories,  // ADD THIS
   nearestMarkets: parsedNearestMarkets,  // Now array of ObjectIds
       bankDetails: parsedBankDetails,
-      
+
       documents: documents,
       security: {
         referralCode: parsedSecurity.referralCode,
@@ -162,7 +163,7 @@ if (req.files) {
 exports.getFarmerById = async (req, res) => {
   try {
     const farmer = await Farmer.findById(req.params.id).populate('commodities');
-    
+
     if (!farmer) {
       return res.status(404).json({
         success: false,
@@ -374,9 +375,9 @@ exports.verifyMpin = async (req, res) => {
       });
     }
 
-    const farmer = await Farmer.findOne({ 
+    const farmer = await Farmer.findOne({
       'personalInfo.mobileNo': mobileNo,
-      isActive: true 
+      isActive: true
     });
 
     if (!farmer) {
@@ -483,6 +484,292 @@ exports.getFarmerStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+exports.getFarmerMarketTransportationOrders = async (req, res) => {
+  try {
+    // Get farmerId from body
+    const { farmerId } = req.body;
+
+    if (!farmerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Farmer ID is required'
+      });
+    }
+
+    console.log('Fetching orders for farmer:', farmerId);
+
+    // Find all orders where this farmer has product items and transporter is assigned
+    const orders = await Order.find({
+      farmerId: farmerId,
+      transporterStatus: 'accepted',
+      'transporterDetails.transporterId': { $exists: true }
+    }).sort({ 'productItems.deliveryDate': 1 });
+
+    if (!orders || orders.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No orders with assigned transporters found',
+        data: []
+      });
+    }
+
+    // Group orders by delivery date
+    const groupedOrders = {};
+
+    orders.forEach(order => {
+      order.productItems.forEach(item => {
+        if (item.farmerId === farmerId) {
+          const deliveryDate = item.deliveryDate
+            ? new Date(item.deliveryDate).toISOString().split('T')[0]
+            : 'No Date';
+
+          if (!groupedOrders[deliveryDate]) {
+            groupedOrders[deliveryDate] = {
+              deliveryDate: deliveryDate,
+              orders: []
+            };
+          }
+
+          // Check if this order is already in the group
+          let existingOrder = groupedOrders[deliveryDate].orders.find(
+            o => o.orderId === order.orderId
+          );
+
+          if (!existingOrder) {
+            existingOrder = {
+              orderId: order.orderId,
+              _id: order._id,
+              traderName: order.traderName,
+              traderMobile: order.traderMobile,
+              transporterDetails: order.transporterDetails,
+              orderStatus: order.orderStatus,
+              transporterStatus: order.transporterStatus,
+              createdAt: order.createdAt,
+              productItems: []
+            };
+            groupedOrders[deliveryDate].orders.push(existingOrder);
+          }
+
+          // Add product item to this order
+          existingOrder.productItems.push({
+            _id: item._id,
+            productId: item.productId,
+            grade: item.grade,
+            quantity: item.quantity,
+            quantitySentByFarmer: item.quantitySentByFarmer || 0,
+            farmerMarketTransportStatus: item.farmerMarketTransportStatus || false,
+            farmerSentDate: item.farmerSentDate,
+            farmerNotes: item.farmerNotes,
+            pricePerUnit: item.pricePerUnit,
+            totalAmount: item.totalAmount,
+            nearestMarket: item.nearestMarket,
+            deliveryDate: item.deliveryDate
+          });
+        }
+      });
+    });
+
+    // Convert grouped orders object to array
+    const result = Object.values(groupedOrders).sort((a, b) => {
+      if (a.deliveryDate === 'No Date') return 1;
+      if (b.deliveryDate === 'No Date') return -1;
+      return new Date(a.deliveryDate) - new Date(b.deliveryDate);
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Orders fetched successfully',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Error fetching farmer market transportation orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch orders',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Update quantity sent by farmer for specific product items
+ * POST /api/farmer/market-transportation/update
+ */
+exports.updateFarmerMarketTransportation = async (req, res) => {
+  try {
+    const { farmerId, orderId, productItemUpdates } = req.body;
+
+    // Validation
+    if (!farmerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Farmer ID is required'
+      });
+    }
+
+    if (!orderId || !productItemUpdates || !Array.isArray(productItemUpdates)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID and product item updates are required'
+      });
+    }
+
+    console.log('Updating order:', orderId, 'for farmer:', farmerId);
+
+    // Find the order
+    const order = await Order.findOne({
+      orderId: orderId,
+      farmerId: farmerId
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Check if transporter is assigned
+    if (order.transporterStatus !== 'accepted' || !order.transporterDetails) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transporter not assigned to this order'
+      });
+    }
+
+    // Update each product item
+    let updatedCount = 0;
+    const errors = [];
+
+    for (const update of productItemUpdates) {
+      const { productItemId, quantitySentByFarmer, farmerNotes } = update;
+
+      if (!productItemId || quantitySentByFarmer === undefined) {
+        errors.push(`Missing data for product item: ${productItemId}`);
+        continue;
+      }
+
+      // Find the product item
+      const productItem = order.productItems.id(productItemId);
+
+      if (!productItem) {
+        errors.push(`Product item not found: ${productItemId}`);
+        continue;
+      }
+
+      // Validate quantity
+      if (quantitySentByFarmer < 0) {
+        errors.push(`Invalid quantity for ${productItemId}: cannot be negative`);
+        continue;
+      }
+
+      if (quantitySentByFarmer > productItem.quantity) {
+        errors.push(`Quantity sent (${quantitySentByFarmer}) exceeds ordered quantity (${productItem.quantity}) for ${productItemId}`);
+        continue;
+      }
+
+      // Update the product item
+      productItem.quantitySentByFarmer = quantitySentByFarmer;
+      productItem.farmerMarketTransportStatus = true;
+      productItem.farmerSentDate = new Date();
+      productItem.farmerNotes = farmerNotes || '';
+
+      updatedCount++;
+    }
+
+    // Save the order
+    await order.save();
+
+    // Prepare response
+    const responseMessage = errors.length > 0
+      ? `Updated ${updatedCount} items with ${errors.length} errors`
+      : `Successfully updated ${updatedCount} items`;
+
+    res.status(200).json({
+      success: updatedCount > 0,
+      message: responseMessage,
+      data: {
+        orderId: order.orderId,
+        updatedCount: updatedCount,
+        errors: errors.length > 0 ? errors : undefined
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating farmer market transportation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update transportation details',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get specific order details for farmer
+ * POST /api/farmer/market-transportation/order-details
+ */
+exports.getFarmerOrderDetails = async (req, res) => {
+  try {
+    const { orderId, farmerId } = req.body;
+
+    if (!farmerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Farmer ID is required'
+      });
+    }
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+
+    const order = await Order.findOne({
+      orderId: orderId,
+      farmerId: farmerId
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Filter product items for this farmer
+    const farmerProductItems = order.productItems.filter(
+      item => item.farmerId === farmerId
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Order details fetched successfully',
+      data: {
+        orderId: order.orderId,
+        _id: order._id,
+        traderName: order.traderName,
+        traderMobile: order.traderMobile,
+        transporterDetails: order.transporterDetails,
+        orderStatus: order.orderStatus,
+        transporterStatus: order.transporterStatus,
+        productItems: farmerProductItems,
+        createdAt: order.createdAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch order details',
       error: error.message
     });
   }

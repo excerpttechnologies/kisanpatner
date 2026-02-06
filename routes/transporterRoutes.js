@@ -41,7 +41,7 @@ router.post('/login-with-mpin', transporterController.loginWithMpin);
 router.post('/login-with-password', transporterController.loginWithPassword);
 
 // ====== REGISTRATION ROUTE ======
-// router.post('/register', 
+// router.post('/register',
 //   upload.fields([
 //     { name: 'rcBook', maxCount: 1 },
 //     { name: 'insuranceDoc', maxCount: 1 },
@@ -98,7 +98,7 @@ router.put('/profile/:id/vehicles/set-primary', transporterController.setPrimary
 router.get('/profile/:id/vehicles', transporterController.getAllVehicles);
 
 // Update profile with files (for single vehicle updates)
-router.put('/profile/:id/update-with-files', 
+router.put('/profile/:id/update-with-files',
   upload.fields([
     { name: 'rcBook', maxCount: 1 },
     { name: 'insuranceDoc', maxCount: 1 },

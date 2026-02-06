@@ -1,7 +1,8 @@
 const Product = require("../models/product");
 const fs = require("fs");
 const path = require("path");
-
+const Farmer = require("../models/Farmer");
+const Category=require("../models/category")
 // // Add new product
 // exports.addProduct = async (req, res) => {
 //   try {
@@ -71,6 +72,115 @@ const path = require("path");
 //     });
 //   }
 // };
+//jan 22 before working
+//exports.addProduct = async (req, res) => {
+  //try {
+    //const {
+      //categoryId,
+      //subCategoryId,
+      //cropBriefDetails,
+      //farmingType,
+      //typeOfSeeds,
+      //packagingType,
+      //packageMeasurement,
+      //unitMeasurement,
+      //deliveryDate,
+      //deliveryTime,
+      //nearestMarket,
+      //farmLocation,
+      //gradePrices,
+      //sellerId,
+      //farmerId,
+    //} = req.body;
+
+    // 🔴 REQUIRED FIELD VALIDATION (IMPORTANT)
+    //if (
+      //!categoryId ||
+      //!subCategoryId ||
+      //!cropBriefDetails ||
+      //!farmingType ||
+      //!typeOfSeeds ||
+      //!packagingType ||
+     // !packageMeasurement ||
+      //packageMeasurement.trim() === "" ||
+      //!deliveryDate ||
+      //!deliveryTime ||
+     // !nearestMarket ||
+      //!farmerId
+    //) {
+      //return res.status(400).json({
+        //success: false,
+        //message: "All required fields must be filled",
+      //});
+    //}
+
+    // Handle file uploads
+    //const cropPhotos = req.files
+      //?.filter(file => file.fieldname === 'photos')
+      //.map(file => file.path) || [];
+
+    // Parse gradePrices
+    //const parsedGradePrices = typeof gradePrices === "string"
+      //? JSON.parse(gradePrices)
+      //: gradePrices;
+
+    // ADD THIS - Assign photos to respective grades
+    //const gradesWithPhotos = parsedGradePrices.map(grade => {
+      //const gradePhotos = req.files
+        //?.filter(file => file.fieldname === `gradePhotos_${grade.grade}`)
+        //.map(file => file.path) || [];
+
+      //return {
+        //...grade,
+       // gradePhotos: gradePhotos
+      //};
+    //});
+    // Parse farmLocation
+    //const parsedFarmLocation =
+      //typeof farmLocation === "string"
+       // ? JSON.parse(farmLocation)
+        //: farmLocation;
+
+    //const newProduct = new Product({
+      //farmerId,
+      //categoryId,
+     // subCategoryId,
+      //cropBriefDetails,
+    //  farmingType,
+      //typeOfSeeds,
+  //    packagingType,
+    //  packageMeasurement: packageMeasurement.trim(), // ✅ FIX
+
+    //unitMeasurement,
+//      deliveryDate,
+  //    deliveryTime,
+    //  nearestMarket,
+      //farmLocation: parsedFarmLocation,
+    //  gradePrices: gradesWithPhotos,
+      //cropPhotos,
+
+      //sellerId,
+    //});
+
+    //const savedProduct = await newProduct.save();
+
+    //res.status(201).json({
+      //success: true,
+  //    message: "Product added successfully",
+    //  data: savedProduct,
+    //});
+ // } catch (error) {
+   // console.error("Error adding product:", error);
+   // res.status(500).json({
+     // success: false,
+  //    message: "Error adding product",
+    //  error: error.message,
+    //});
+ // }
+//};
+
+
+
 exports.addProduct = async (req, res) => {
   try {
     const {
@@ -89,73 +199,108 @@ exports.addProduct = async (req, res) => {
       gradePrices,
       sellerId,
       farmerId,
+      // 🔥 NEW LIVESTOCK FIELDS
+      livestockAge,
+      livestockWeight,
+      livestockGender,
+      livestockDescription,
+      price,
+      quantity,
+      quantityType,
+      priceType
     } = req.body;
 
-    // 🔴 REQUIRED FIELD VALIDATION (IMPORTANT)
-    if (
-      !categoryId ||
-      !subCategoryId ||
-      !cropBriefDetails ||
-      !farmingType ||
-      !typeOfSeeds ||
-      //!packagingType ||
-     // !packageMeasurement ||
-      packageMeasurement.trim() === "" ||
-      !deliveryDate ||
-      !deliveryTime ||
-     // !nearestMarket ||
-      !farmerId
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "All required fields must be filled",
-      });
-    }
+    // Check if this is a livestock category
+    const category = await Category.findById(categoryId);
+    const isLivestock = category?.categoryName?.toLowerCase().includes('livestock');
+
+    // 🔴 REQUIRED FIELD VALIDATION
+    // if (
+    //   !categoryId ||
+    //   !subCategoryId ||
+    //   !cropBriefDetails ||
+    //   !farmingType ||
+    //   !deliveryDate ||
+    //   !deliveryTime ||
+    //   !farmerId
+    // ) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "All required fields must be filled",
+    //   });
+    // }
 
     // Handle file uploads
     const cropPhotos = req.files
       ?.filter(file => file.fieldname === 'photos')
       .map(file => file.path) || [];
 
-    // Parse gradePrices
-    const parsedGradePrices = typeof gradePrices === "string" 
-      ? JSON.parse(gradePrices) 
-      : gradePrices;
+    let finalGradePrices;
 
-    // ADD THIS - Assign photos to respective grades
-    const gradesWithPhotos = parsedGradePrices.map(grade => {
-      const gradePhotos = req.files
-        ?.filter(file => file.fieldname === `gradePhotos_${grade.grade}`)
-        .map(file => file.path) || [];
-      
-      return {
-        ...grade,
-        gradePhotos: gradePhotos
-      };
-    });
+    // 🔥 IF LIVESTOCK - Create default Grade A entry
+    if (isLivestock) {
+      finalGradePrices = [{
+        grade: "A Grade",
+        pricePerUnit: parseFloat(price),
+        totalQty: parseFloat(quantity),
+        quantityType: quantityType || "bulk",
+        priceType: priceType || "negotiable",
+        gradePhotos: cropPhotos, // Use uploaded photos
+        status: 'available'
+      }];
+    } else {
+      // CROP - Parse gradePrices as before
+      const parsedGradePrices = typeof gradePrices === "string"
+        ? JSON.parse(gradePrices)
+        : gradePrices;
+
+      // Assign photos to respective grades
+      finalGradePrices = parsedGradePrices.map(grade => {
+        const gradePhotos = req.files
+          ?.filter(file => file.fieldname === `gradePhotos_${grade.grade}`)
+          .map(file => file.path) || [];
+
+        return {
+          ...grade,
+          gradePhotos: gradePhotos
+        };
+      });
+    }
+
     // Parse farmLocation
     const parsedFarmLocation =
       typeof farmLocation === "string"
         ? JSON.parse(farmLocation)
         : farmLocation;
 
+    // 🔥 Parse livestock age if provided
+    const parsedLivestockAge = livestockAge && typeof livestockAge === "string"
+      ? JSON.parse(livestockAge)
+      : livestockAge;
+
     const newProduct = new Product({
       farmerId,
       categoryId,
       subCategoryId,
-      cropBriefDetails,
-      farmingType,
-      typeOfSeeds,
-      packagingType,
-      packageMeasurement: packageMeasurement.trim(), // ✅ FIX
-      unitMeasurement,
+      cropBriefDetails, // For livestock: animal type (Goat, Cow, etc.)
+      farmingType, // For livestock: breed type (Gohlwadi, Jersey, etc.)
+      typeOfSeeds: typeOfSeeds || "N/A", // Not applicable for livestock
+      packagingType: packagingType || "N/A",
+      packageMeasurement: packageMeasurement?.trim() || "N/A",
+      unitMeasurement: unitMeasurement || "N/A",
       deliveryDate,
       deliveryTime,
       nearestMarket,
       farmLocation: parsedFarmLocation,
-      gradePrices: gradesWithPhotos,
-      cropPhotos,
-   
+      gradePrices: finalGradePrices, // Contains Grade A for livestock
+      cropPhotos: isLivestock ? [] : cropPhotos, // For crops, store separately
+      // 🔥 ADD LIVESTOCK DETAILS (NEW FIELD IN SCHEMA)
+      livestockDetails: isLivestock ? {
+        age: parsedLivestockAge,
+        weight: livestockWeight ? parseFloat(livestockWeight) : undefined,
+        gender: livestockGender,
+        description: livestockDescription
+      } : undefined,
       sellerId,
     });
 
@@ -176,10 +321,51 @@ exports.addProduct = async (req, res) => {
   }
 };
 
+
 // Helper function to generate the next ID based on role
 
 // Get all products
 // Get all products - REPLACE EXISTING
+// exports.getAllProducts = async (req, res) => {
+//   try {
+//     const products = await Product.find()
+//       .populate("categoryId", "categoryName")
+//       .populate("subCategoryId", "subCategoryName")
+//       .sort({ createdAt: -1 });
+
+//     // ADD THIS: Filter offers based on trader
+//     const traderId = req.query.traderId; // Get from query params
+
+//     if (traderId) {
+//       // Filter offers to show only relevant ones for this trader
+//       products.forEach((product) => {
+//         product.gradePrices.forEach((grade) => {
+//           if (grade.offers && grade.offers.length > 0) {
+//             // Show only offers from this trader OR non-private countered offers
+//             grade.offers = grade.offers.filter(
+//               (offer) =>
+//                 offer.traderId === traderId ||
+//                 (offer.status === "pending" && !offer.isCounterPrivate)
+//             );
+//           }
+//         });
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       count: products.length,
+//       data: products,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching products:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error fetching products",
+//       error: error.message,
+//     });
+//   }
+// };
 exports.getAllProducts = async (req, res) => {
   try {
     const products = await Product.find()
@@ -187,19 +373,16 @@ exports.getAllProducts = async (req, res) => {
       .populate("subCategoryId", "subCategoryName")
       .sort({ createdAt: -1 });
 
-    // ADD THIS: Filter offers based on trader
-    const traderId = req.query.traderId; // Get from query params
+    const traderId = req.query.traderId;
 
     if (traderId) {
-      // Filter offers to show only relevant ones for this trader
       products.forEach((product) => {
         product.gradePrices.forEach((grade) => {
           if (grade.offers && grade.offers.length > 0) {
-            // Show only offers from this trader OR non-private countered offers
             grade.offers = grade.offers.filter(
               (offer) =>
-                offer.traderId === traderId ||
-                (offer.status === "pending" && !offer.isCounterPrivate)
+                // Show ALL offers where this trader is involved
+                offer.traderId === traderId
             );
           }
         });
@@ -220,7 +403,6 @@ exports.getAllProducts = async (req, res) => {
     });
   }
 };
-
 // Get product by ID
 exports.getProductById = async (req, res) => {
   try {
@@ -387,7 +569,7 @@ exports.deleteProduct = async (req, res) => {
 
 exports.makeOffer = async (req, res) => {
   try {
-    const { productId, gradeId, traderId, traderName, offeredPrice, quantity } =
+    const { productId, gradeId, traderId,  offeredPrice, quantity } =
       req.body;
 
     // Validate required fields
@@ -445,11 +627,20 @@ exports.makeOffer = async (req, res) => {
         message: "Bulk purchase requires buying full quantity",
       });
     }
+ const trader = await Farmer.findOne({ traderId });
 
+    if (!trader) {
+      return res.status(404).json({
+        success: false,
+        message: "Trader not found",
+      });
+    }
+
+    const traderName = trader.personalInfo.name;
     // Add offer
     grade.offers.push({
       traderId,
-      traderName: traderName || "Unknown Trader",
+      traderName,
       offeredPrice,
       quantity,
       status: "pending",
@@ -471,6 +662,59 @@ exports.makeOffer = async (req, res) => {
   }
 };
 
+
+exports.makeCounterOffer = async (req, res) => {
+  try {
+    const { productId, gradeId, offerId, counterPrice, counterQuantity } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    const grade = product.gradePrices.id(gradeId);
+    if (!grade) {
+      return res.status(404).json({ success: false, message: "Grade not found" });
+    }
+
+    const offer = grade.offers.id(offerId);
+    if (!offer) {
+      return res.status(404).json({ success: false, message: "Offer not found" });
+    }
+
+    // Validate counter quantity
+    if (counterQuantity > grade.totalQty) {
+      return res.status(400).json({
+        success: false,
+        message: "Counter quantity exceeds available quantity"
+      });
+    }
+
+    if (grade.quantityType === 'bulk' && counterQuantity !== grade.totalQty) {
+      return res.status(400).json({
+        success: false,
+        message: "Bulk purchase requires full quantity"
+      });
+    }
+
+    // Update the offer with counter values
+    offer.status = "countered";
+    offer.counterPrice = counterPrice;
+    offer.counterQuantity = counterQuantity;
+    offer.counterDate = new Date();
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Counter offer sent successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error("Error making counter offer:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 // Accept listed price endpoint
 // REPLACE the entire acceptListedPrice function in productController.js
 exports.acceptListedPrice = async (req, res) => {
@@ -529,7 +773,17 @@ exports.acceptListedPrice = async (req, res) => {
     const totalAmount = grade.pricePerUnit * quantity;
 
     // ADD THIS - Get trader name from request or default
-    const traderName = req.body.traderName || "Unknown Trader";
+    // const traderName = req.body.traderName || "Unknown Trader";
+const trader = await Farmer.findOne({ traderId });
+
+    if (!trader) {
+      return res.status(404).json({
+        success: false,
+        message: "Trader not found",
+      });
+    }
+
+    const traderName = trader.personalInfo.name; // ✅ Correct source
 
     // ADD THIS - Record purchase in history
     if (!grade.purchaseHistory) {
@@ -803,52 +1057,163 @@ exports.acceptTraderOffer = async (req, res) => {
   }
 };
 // Make counter offer - REPLACE EXISTING
-exports.makeCounterOffer = async (req, res) => {
+// exports.makeCounterOffer = async (req, res) => {
+//   try {
+//     const { productId, gradeId, offerId, counterPrice, counterQuantity } =
+//       req.body;
+
+//     const product = await Product.findById(productId);
+//     if (!product) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Product not found" });
+//     }
+
+//     const grade = product.gradePrices.id(gradeId);
+//     if (!grade) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Grade not found" });
+//     }
+
+//     const offer = grade.offers.id(offerId);
+//     if (!offer) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Offer not found" });
+//     }
+
+//     // Update the offer with counter values
+//     offer.status = "countered";
+//     offer.counterPrice = counterPrice;
+//     offer.counterQuantity = counterQuantity;
+//     offer.counterDate = new Date();
+//     offer.isCounterPrivate = true; // ADD THIS - marks it as private to this trader only
+
+//     await product.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Counter offer sent successfully",
+//       data: product,
+//     });
+//   } catch (error) {
+//     console.error("Error making counter offer:", error);
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+exports.acceptCounterOffer = async (req, res) => {
   try {
-    const { productId, gradeId, offerId, counterPrice, counterQuantity } =
-      req.body;
+    const { productId, gradeId, offerId, traderId, traderName } = req.body;
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
     }
 
     const grade = product.gradePrices.id(gradeId);
     if (!grade) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Grade not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Grade not found",
+      });
     }
 
     const offer = grade.offers.id(offerId);
     if (!offer) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Offer not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Offer not found",
+      });
     }
 
-    // Update the offer with counter values
-    offer.status = "countered";
-    offer.counterPrice = counterPrice;
-    offer.counterQuantity = counterQuantity;
-    offer.counterDate = new Date();
-    offer.isCounterPrivate = true; // ADD THIS - marks it as private to this trader only
+    // Verify offer is countered
+    if (offer.status !== "countered") {
+      return res.status(400).json({
+        success: false,
+        message: "This offer has not been countered by the farmer",
+      });
+    }
+
+    // Check if counter quantity is available
+    if (offer.counterQuantity > grade.totalQty) {
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient quantity available",
+      });
+    }
+
+    // For bulk, validate quantity
+    if (grade.quantityType === "bulk" && offer.counterQuantity !== grade.totalQty) {
+      return res.status(400).json({
+        success: false,
+        message: "Bulk purchase requires full quantity",
+      });
+    }
+
+    // Calculate total amount using COUNTER PRICE
+    const totalAmount = offer.counterPrice * offer.counterQuantity;
+
+    // Update offer status to accepted
+    offer.status = "accepted";
+
+    // Record purchase in history
+    if (!grade.purchaseHistory) {
+      grade.purchaseHistory = [];
+    }
+
+    grade.purchaseHistory.push({
+      traderId: offer.traderId,
+      traderName: offer.traderName || "Unknown Trader",
+      quantity: offer.counterQuantity,
+      pricePerUnit: offer.counterPrice,
+      totalAmount: totalAmount,
+      purchaseDate: new Date(),
+      purchaseType: "offer_accepted",
+      paymentStatus: "pending",
+      orderCreated: false, // Will be set to true when order is created
+    });
+
+    // Update grade quantity
+    grade.totalQty -= offer.counterQuantity;
+
+    // Update grade status based on remaining quantity
+    if (grade.totalQty === 0) {
+      grade.status = "sold";
+    } else {
+      grade.status = "partially_sold";
+    }
 
     await product.save();
 
     res.status(200).json({
       success: true,
-      message: "Counter offer sent successfully",
-      data: product,
+      message: "Counter offer accepted successfully",
+      data: {
+        productId: product._id,
+        gradeId: grade._id,
+        offerId: offer._id,
+        totalAmount,
+        remainingQty: grade.totalQty,
+        status: grade.status,
+        purchaseDetails: {
+          quantity: offer.counterQuantity,
+          pricePerUnit: offer.counterPrice,
+          totalAmount,
+        },
+      },
     });
   } catch (error) {
-    console.error("Error making counter offer:", error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error accepting counter offer:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
-
 // Reject trader's offer
 exports.rejectTraderOffer = async (req, res) => {
   try {
@@ -946,6 +1311,65 @@ exports.rejectTraderOffer = async (req, res) => {
 // };
 // Updated getTraderPurchases in productController.js
 
+// exports.getTraderPurchases = async (req, res) => {
+//   try {
+//     const { traderId } = req.params;
+
+//     const products = await Product.find({
+//       "gradePrices.purchaseHistory.traderId": traderId,
+//     })
+//       .populate("categoryId", "categoryName")
+//       .populate("subCategoryId", "subCategoryName");
+
+//     const purchases = [];
+
+//     products.forEach((product) => {
+//       product.gradePrices.forEach((grade) => {
+//         if (grade.purchaseHistory) {
+//           grade.purchaseHistory
+//             .filter((p) =>
+//               p.traderId === traderId &&
+//               !p.orderCreated // 🔥 FILTER: Only show items not yet ordered
+//             )
+//             .forEach((purchase) => {
+//               purchases.push({
+//                 _id: purchase._id,
+//                 product: {
+//                   _id: product._id,
+//                   farmerId: product.farmerId,
+//                   productId: product.productId,
+//                   cropBriefDetails: product.cropBriefDetails,
+//                   unitMeasurement: product.unitMeasurement,
+//                   categoryName: product.categoryId?.categoryName,
+//                   deliveryDate: product.deliveryDate,
+//                   subCategoryName: product.subCategoryId?.subCategoryName,
+//                 },
+//                 grade: grade.grade,
+//                 ...purchase._doc,
+//               });
+//             });
+//         }
+//       });
+//     });
+
+//     // Sort by date, newest first
+//     purchases.sort(
+//       (a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate)
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       count: purchases.length,
+//       data: purchases,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
 exports.getTraderPurchases = async (req, res) => {
   try {
     const { traderId } = req.params;
@@ -962,13 +1386,15 @@ exports.getTraderPurchases = async (req, res) => {
       product.gradePrices.forEach((grade) => {
         if (grade.purchaseHistory) {
           grade.purchaseHistory
-            .filter((p) => 
-              p.traderId === traderId && 
-              !p.orderCreated // 🔥 FILTER: Only show items not yet ordered
+            .filter((p) =>
+              p.traderId === traderId &&
+              !p.orderCreated
             )
             .forEach((purchase) => {
               purchases.push({
                 _id: purchase._id,
+                gradeId: grade._id, // ✅ ADD THIS LINE
+                 quantityType: grade.quantityType,
                 product: {
                   _id: product._id,
                   farmerId: product.farmerId,
@@ -987,7 +1413,6 @@ exports.getTraderPurchases = async (req, res) => {
       });
     });
 
-    // Sort by date, newest first
     purchases.sort(
       (a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate)
     );
@@ -1104,6 +1529,7 @@ exports.makeOfferBatch = async (req, res) => {
     });
   }
 };
+
 
 // Get farmer notifications with unread count
 exports.getFarmerNotifications = async (req, res) => {
@@ -1235,7 +1661,7 @@ exports.markAllNotificationsAsRead = async (req, res) => {
 
     for (const product of products) {
       let productUpdated = false;
-      
+
       product.gradePrices.forEach(grade => {
         if (grade.offers && grade.offers.length > 0) {
           grade.offers.forEach(offer => {
@@ -1331,7 +1757,7 @@ exports.getTraderNotifications = async (req, res) => {
 
     orders.forEach(order => {
       // Check for payment status changes
-      if (order.traderToAdminPayment && 
+      if (order.traderToAdminPayment &&
           !order.traderToAdminPayment.lastStatusChangeReadByTrader) {
         notifications.push({
           _id: `payment_${order._id}`,
@@ -1403,7 +1829,7 @@ exports.markTraderNotificationAsRead = async (req, res) => {
       const { orderObjectId } = req.body;
       const Order = require('../models/order');
       const order = await Order.findById(orderObjectId);
-      
+
       if (!order) {
         return res.status(404).json({
           success: false,
@@ -1420,7 +1846,7 @@ exports.markTraderNotificationAsRead = async (req, res) => {
       const { orderObjectId, paymentId } = req.body;
       const Order = require('../models/order');
       const order = await Order.findById(orderObjectId);
-      
+
       if (!order) {
         return res.status(404).json({
           success: false,
@@ -1438,7 +1864,7 @@ exports.markTraderNotificationAsRead = async (req, res) => {
       // Mark offer notification as read
       const { productId, gradeId, offerId } = req.body;
       const product = await Product.findById(productId);
-      
+
       if (!product) {
         return res.status(404).json({
           success: false,
@@ -1494,7 +1920,7 @@ exports.markAllTraderNotificationsAsRead = async (req, res) => {
 
     for (const product of products) {
       let productUpdated = false;
-      
+
       product.gradePrices.forEach(grade => {
         if (grade.offers && grade.offers.length > 0) {
           grade.offers
@@ -1522,7 +1948,7 @@ exports.markAllTraderNotificationsAsRead = async (req, res) => {
     for (const order of orders) {
       let orderUpdated = false;
 
-      if (order.traderToAdminPayment && 
+      if (order.traderToAdminPayment &&
           !order.traderToAdminPayment.lastStatusChangeReadByTrader) {
         order.traderToAdminPayment.lastStatusChangeReadByTrader = true;
         orderUpdated = true;
@@ -1745,9 +2171,9 @@ exports.updatePurchaseQuantity = async (req, res) => {
       return res.status(400).json({ success: false, message: "Insufficient quantity available" });
     }
 if (grade.quantityType === 'bulk') {
-  return res.status(400).json({ 
-    success: false, 
-    message: "Cannot modify bulk purchase quantity" 
+  return res.status(400).json({
+    success: false,
+    message: "Cannot modify bulk purchase quantity"
   });
 }
     // Update purchase

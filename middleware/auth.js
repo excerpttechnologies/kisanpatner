@@ -1,30 +1,45 @@
 const jwt = require('jsonwebtoken');
 const Farmer = require('../models/Farmer');
+const Transporter = require('../models/Transporter');
 
-const SECRET = process.env.JWT_SECRET || 'supersecret';
-
-module.exports = async (req, res, next) => {
+const auth = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'Authorization token required' });
+    // Get token from header
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({ error: 'No authentication token provided' });
     }
 
-    const token = authHeader.split(' ')[1];
-    const payload = jwt.verify(token, SECRET);
-    if (!payload || !payload.id) {
-      return res.status(401).json({ success: false, message: 'Invalid token payload' });
-    }
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
 
-    const user = await Farmer.findById(payload.id);
+    // Find user in either Farmer or Transporter collection
+    let user = await Farmer.findById(decoded.userId);
+    let userType = 'farmer';
+
     if (!user) {
-      return res.status(401).json({ success: false, message: 'User not found' });
+      user = await Transporter.findById(decoded.userId);
+      userType = 'transporter';
     }
 
-    req.user = user;
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    // Add user info to request
+    req.user = {
+      _id: user._id,
+      id: user._id.toString(),
+      role: user.role || userType,
+      ...user.toObject()
+    };
+
     next();
-  } catch (err) {
-    console.error('Auth middleware error:', err.message || err);
-    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    res.status(401).json({ error: 'Please authenticate' });
   }
 };
+
+module.exports = auth;

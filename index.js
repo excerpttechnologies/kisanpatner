@@ -89,6 +89,8 @@ const history = require('connect-history-api-fallback');
 const app = express();
 const cropcareCartRoutes = require('./routes/cropcareCartRoutes');
 const razorpayRoutes = require('./routes/razorpayRoutes');
+const registrationRoutes = require("./routes/registrationRoutes");
+
 // Middlewares
 // =======================
 app.use(cors());
@@ -157,6 +159,7 @@ app.use("/api/payment", require("./routes/paymentRoutes"));
 app.use("/api/transporter", require("./routes/transporterRoutes"));
 app.use("/api/admin", require("./routes/adminorderRoutes"));
 app.use("/api/orders/history", require("./routes/orderhistoryRoutes"));
+app.use("/api/register", registrationRoutes);
 // =======================
 // Frontend (SPA)
 // =======================

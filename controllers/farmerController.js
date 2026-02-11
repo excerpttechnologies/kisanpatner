@@ -2,14 +2,13 @@ const Farmer = require('../models/Farmer');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const Order = require('../models/order');
-
-
+const mongoose = require('mongoose');
+const Market = require('../models/Market'); // Add this import
 
 const generateNextId = async (role) => {
   const prefix = role === 'farmer' ? 'far' : 'trd';
   const fieldName = role === 'farmer' ? 'farmerId' : 'traderId';
 
-  // Find the last registered user with this role - using correct field
   const lastUser = await Farmer.findOne({
     [fieldName]: new RegExp(`^${prefix}-`)
   })
@@ -17,15 +16,12 @@ const generateNextId = async (role) => {
   .select(fieldName);
 
   if (!lastUser) {
-    // First user of this role
     return `${prefix}-01`;
   }
 
-  // Extract the number from the last ID
   const lastNumber = parseInt(lastUser[fieldName].split('-')[1]);
   const nextNumber = lastNumber + 1;
 
-  // Pad with zeros to maintain format
   return `${prefix}-${String(nextNumber).padStart(2, '0')}`;
 };
 
@@ -42,7 +38,6 @@ exports.registerFarmer = async (req, res) => {
       role
     } = req.body;
 
-    // Validate role
     if (!role || !['farmer', 'trader'].includes(role)) {
       return res.status(400).json({
         success: false,
@@ -50,18 +45,15 @@ exports.registerFarmer = async (req, res) => {
       });
     }
 
-    // Parse JSON strings
     const parsedPersonalInfo = JSON.parse(personalInfo);
     const parsedFarmLocation = JSON.parse(farmLocation);
     const parsedFarmLand = JSON.parse(farmLand);
     const parsedCommodities = JSON.parse(commodities);
-
     const parsedBankDetails = JSON.parse(bankDetails);
     const parsedSecurity = JSON.parse(security);
-const parsedSubcategories = JSON.parse(req.body.subcategories || '[]');
-const parsedNearestMarkets = JSON.parse(nearestMarkets);  // This should now be an array of IDs
+    const parsedSubcategories = JSON.parse(req.body.subcategories || '[]');
+    const parsedNearestMarkets = JSON.parse(nearestMarkets);
 
-    // Check if farmer already exists
     const existingFarmer = await Farmer.findOne({
       'personalInfo.mobileNo': parsedPersonalInfo.mobileNo
     });
@@ -73,67 +65,59 @@ const parsedNearestMarkets = JSON.parse(nearestMarkets);  // This should now be 
       });
     }
 
-    // Generate unique farmer/trader ID
     const farmerId = await generateNextId(role);
 
-    // Hash MPIN and Password
     const salt = await bcrypt.genSalt(10);
     const hashedMpin = await bcrypt.hash(parsedSecurity.mpin, salt);
     const hashedPassword = await bcrypt.hash(parsedSecurity.password, salt);
 
-    // Prepare document paths
-// Prepare document paths
-const documents = {};
-if (req.files) {
-  if (req.files.panCard) {
-    documents.panCard = `/uploads/${req.files.panCard[0].filename}`;
-  }
-  if (req.files.aadharFront) {
-    documents.aadharFront = `/uploads/${req.files.aadharFront[0].filename}`;
-  }
-  if (req.files.aadharBack) {
-    documents.aadharBack = `/uploads/${req.files.aadharBack[0].filename}`;
-  }
+    const documents = {};
+    if (req.files) {
+      if (req.files.panCard) {
+        documents.panCard = `/uploads/${req.files.panCard[0].filename}`;
+      }
+      if (req.files.aadharFront) {
+        documents.aadharFront = `/uploads/${req.files.aadharFront[0].filename}`;
+      }
+      if (req.files.aadharBack) {
+        documents.aadharBack = `/uploads/${req.files.aadharBack[0].filename}`;
+      }
 
-  if (role === 'farmer') {
-    if (req.files.bankPassbook) {
-      documents.bankPassbook = `/uploads/${req.files.bankPassbook[0].filename}`;
+      if (role === 'farmer') {
+        if (req.files.bankPassbook) {
+          documents.bankPassbook = `/uploads/${req.files.bankPassbook[0].filename}`;
+        }
+      } else if (role === 'trader') {
+        if (req.files.businessLicense) {
+          documents.businessLicense = `/uploads/${req.files.businessLicense[0].filename}`;
+        }
+        if (req.files.photo) {
+          documents.photo = `/uploads/${req.files.photo[0].filename}`;
+        }
+        if (req.files.businessNameBoard) {
+          documents.businessNameBoard = `/uploads/${req.files.businessNameBoard[0].filename}`;
+        }
+      }
     }
-  } else if (role === 'trader') {
-    if (req.files.businessLicense) {
-      documents.businessLicense = `/uploads/${req.files.businessLicense[0].filename}`;
-    }
-    if (req.files.photo) {
-      documents.photo = `/uploads/${req.files.photo[0].filename}`;
-    }
-    if (req.files.businessNameBoard) {
-      documents.businessNameBoard = `/uploads/${req.files.businessNameBoard[0].filename}`;
-    }
-  }
-}
 
-    // Create new farmer/trader
     const newFarmer = new Farmer({
-  [role === 'farmer' ? 'farmerId' : 'traderId']: farmerId,
+      [role === 'farmer' ? 'farmerId' : 'traderId']: farmerId,
       personalInfo: parsedPersonalInfo,
       farmLocation: parsedFarmLocation,
       farmLand: parsedFarmLand,
       role: role,
-
-
       commodities: parsedCommodities,
-  subcategories: parsedSubcategories,  // ADD THIS
-  nearestMarkets: parsedNearestMarkets,  // Now array of ObjectIds
+      subcategories: parsedSubcategories,
+      nearestMarkets: parsedNearestMarkets,
       bankDetails: parsedBankDetails,
-
       documents: documents,
       security: {
         referralCode: parsedSecurity.referralCode,
         mpin: hashedMpin,
         password: hashedPassword
       },
-      registrationStatus: 'pending',  // ADD THIS
-  isActive: false  // ADD THIS (or remove if default is false in schema)
+      registrationStatus: 'pending',
+      isActive: false
     });
 
     await newFarmer.save();
@@ -159,7 +143,7 @@ if (req.files) {
     });
   }
 };
-// Get Farmer by ID
+
 exports.getFarmerById = async (req, res) => {
   try {
     const farmer = await Farmer.findById(req.params.id).populate('commodities');
@@ -171,7 +155,6 @@ exports.getFarmerById = async (req, res) => {
       });
     }
 
-    // Don't send MPIN in response
     const farmerData = farmer.toObject();
     delete farmerData.security.mpin;
 
@@ -189,7 +172,6 @@ exports.getFarmerById = async (req, res) => {
   }
 };
 
-// Get All Farmers
 exports.getAllFarmers = async (req, res) => {
   try {
     const { traderId, role } = req.query;
@@ -211,16 +193,14 @@ exports.getAllFarmers = async (req, res) => {
   }
 };
 
-// Update Farmer
 exports.updateFarmer = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Remove fields that shouldn't be updated directly
     delete updateData._id;
     delete updateData.farmerId;
-    delete updateData.security; // Don't allow security updates from this endpoint
+    delete updateData.security;
     delete updateData.registeredAt;
 
     const updatedFarmer = await Farmer.findByIdAndUpdate(
@@ -256,8 +236,6 @@ exports.updateFarmer = async (req, res) => {
   }
 };
 
-
-// Delete Farmer (Soft Delete)
 exports.deleteFarmer = async (req, res) => {
   try {
     const farmer = await Farmer.findByIdAndUpdate(
@@ -287,7 +265,6 @@ exports.deleteFarmer = async (req, res) => {
   }
 };
 
-// Permanently Delete Farmer
 exports.permanentlyDeleteFarmer = async (req, res) => {
   try {
     const farmer = await Farmer.findByIdAndDelete(req.params.id);
@@ -313,13 +290,11 @@ exports.permanentlyDeleteFarmer = async (req, res) => {
   }
 };
 
-// Search Farmers
 exports.searchFarmers = async (req, res) => {
   try {
     const { query, state, district, commodity } = req.query;
     let searchCriteria = { isActive: true };
 
-    // Text search in name, mobile, village
     if (query) {
       searchCriteria.$or = [
         { 'personalInfo.name': { $regex: query, $options: 'i' } },
@@ -328,17 +303,14 @@ exports.searchFarmers = async (req, res) => {
       ];
     }
 
-    // Filter by state
     if (state) {
       searchCriteria['personalInfo.state'] = state;
     }
 
-    // Filter by district
     if (district) {
       searchCriteria['personalInfo.district'] = district;
     }
 
-    // Filter by commodity
     if (commodity) {
       searchCriteria.commodities = commodity;
     }
@@ -363,7 +335,6 @@ exports.searchFarmers = async (req, res) => {
   }
 };
 
-// Verify MPIN (for login)
 exports.verifyMpin = async (req, res) => {
   try {
     const { mobileNo, mpin } = req.body;
@@ -396,7 +367,6 @@ exports.verifyMpin = async (req, res) => {
       });
     }
 
-    // Don't send MPIN in response
     const farmerData = farmer.toObject();
     delete farmerData.security.mpin;
 
@@ -415,7 +385,6 @@ exports.verifyMpin = async (req, res) => {
   }
 };
 
-// Get Farmer Statistics
 exports.getFarmerStats = async (req, res) => {
   try {
     const totalFarmers = await Farmer.countDocuments({ isActive: true });
@@ -488,9 +457,9 @@ exports.getFarmerStats = async (req, res) => {
     });
   }
 };
+
 exports.getFarmerMarketTransportationOrders = async (req, res) => {
   try {
-    // Get farmerId from body
     const { farmerId } = req.body;
 
     if (!farmerId) {
@@ -502,7 +471,6 @@ exports.getFarmerMarketTransportationOrders = async (req, res) => {
 
     console.log('Fetching orders for farmer:', farmerId);
 
-    // Find all orders where this farmer has product items and transporter is assigned
     const orders = await Order.find({
       farmerId: farmerId,
       transporterStatus: 'accepted',
@@ -517,7 +485,6 @@ exports.getFarmerMarketTransportationOrders = async (req, res) => {
       });
     }
 
-    // Group orders by delivery date
     const groupedOrders = {};
 
     orders.forEach(order => {
@@ -534,7 +501,6 @@ exports.getFarmerMarketTransportationOrders = async (req, res) => {
             };
           }
 
-          // Check if this order is already in the group
           let existingOrder = groupedOrders[deliveryDate].orders.find(
             o => o.orderId === order.orderId
           );
@@ -554,7 +520,6 @@ exports.getFarmerMarketTransportationOrders = async (req, res) => {
             groupedOrders[deliveryDate].orders.push(existingOrder);
           }
 
-          // Add product item to this order
           existingOrder.productItems.push({
             _id: item._id,
             productId: item.productId,
@@ -573,7 +538,6 @@ exports.getFarmerMarketTransportationOrders = async (req, res) => {
       });
     });
 
-    // Convert grouped orders object to array
     const result = Object.values(groupedOrders).sort((a, b) => {
       if (a.deliveryDate === 'No Date') return 1;
       if (b.deliveryDate === 'No Date') return -1;
@@ -596,15 +560,10 @@ exports.getFarmerMarketTransportationOrders = async (req, res) => {
   }
 };
 
-/**
- * Update quantity sent by farmer for specific product items
- * POST /api/farmer/market-transportation/update
- */
 exports.updateFarmerMarketTransportation = async (req, res) => {
   try {
     const { farmerId, orderId, productItemUpdates } = req.body;
 
-    // Validation
     if (!farmerId) {
       return res.status(400).json({
         success: false,
@@ -621,7 +580,6 @@ exports.updateFarmerMarketTransportation = async (req, res) => {
 
     console.log('Updating order:', orderId, 'for farmer:', farmerId);
 
-    // Find the order
     const order = await Order.findOne({
       orderId: orderId,
       farmerId: farmerId
@@ -634,7 +592,6 @@ exports.updateFarmerMarketTransportation = async (req, res) => {
       });
     }
 
-    // Check if transporter is assigned
     if (order.transporterStatus !== 'accepted' || !order.transporterDetails) {
       return res.status(400).json({
         success: false,
@@ -642,7 +599,6 @@ exports.updateFarmerMarketTransportation = async (req, res) => {
       });
     }
 
-    // Update each product item
     let updatedCount = 0;
     const errors = [];
 
@@ -654,7 +610,6 @@ exports.updateFarmerMarketTransportation = async (req, res) => {
         continue;
       }
 
-      // Find the product item
       const productItem = order.productItems.id(productItemId);
 
       if (!productItem) {
@@ -662,7 +617,6 @@ exports.updateFarmerMarketTransportation = async (req, res) => {
         continue;
       }
 
-      // Validate quantity
       if (quantitySentByFarmer < 0) {
         errors.push(`Invalid quantity for ${productItemId}: cannot be negative`);
         continue;
@@ -673,7 +627,6 @@ exports.updateFarmerMarketTransportation = async (req, res) => {
         continue;
       }
 
-      // Update the product item
       productItem.quantitySentByFarmer = quantitySentByFarmer;
       productItem.farmerMarketTransportStatus = true;
       productItem.farmerSentDate = new Date();
@@ -682,10 +635,8 @@ exports.updateFarmerMarketTransportation = async (req, res) => {
       updatedCount++;
     }
 
-    // Save the order
     await order.save();
 
-    // Prepare response
     const responseMessage = errors.length > 0
       ? `Updated ${updatedCount} items with ${errors.length} errors`
       : `Successfully updated ${updatedCount} items`;
@@ -710,10 +661,6 @@ exports.updateFarmerMarketTransportation = async (req, res) => {
   }
 };
 
-/**
- * Get specific order details for farmer
- * POST /api/farmer/market-transportation/order-details
- */
 exports.getFarmerOrderDetails = async (req, res) => {
   try {
     const { orderId, farmerId } = req.body;
@@ -744,7 +691,6 @@ exports.getFarmerOrderDetails = async (req, res) => {
       });
     }
 
-    // Filter product items for this farmer
     const farmerProductItems = order.productItems.filter(
       item => item.farmerId === farmerId
     );
@@ -771,6 +717,430 @@ exports.getFarmerOrderDetails = async (req, res) => {
       success: false,
       message: 'Failed to fetch order details',
       error: error.message
+    });
+  }
+};
+
+// ==================== TRADER PROFILE FUNCTIONS ====================
+
+exports.getTraderProfile = async (req, res) => {
+  try {
+    const { traderId } = req.params;
+
+    console.log('🔍 Fetching trader profile for:', traderId);
+
+    const trader = await Farmer.findOne({
+      $or: [
+        { traderId: traderId },
+        { farmerId: traderId, role: 'trader' }
+      ]
+    })
+    .populate('commodities')
+    .populate('subcategories')
+    .populate('nearestMarkets');
+
+    if (!trader) {
+      console.log('❌ Trader not found:', traderId);
+      return res.status(404).json({
+        success: false,
+        message: 'Trader not found'
+      });
+    }
+
+    const traderData = trader.toObject();
+    delete traderData.security;
+    delete traderData.__v;
+
+    console.log('✅ Trader found:', trader.traderId || trader.farmerId);
+
+    res.status(200).json({
+      success: true,
+      data: traderData
+    });
+  } catch (error) {
+    console.error('Error in getTraderProfile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+exports.getUserProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { type = 'id' } = req.query;
+
+    let query = {};
+
+    if (type === 'trader') {
+      query = {
+        $or: [
+          { traderId: userId },
+          { farmerId: userId, role: 'trader' }
+        ]
+      };
+    } else if (type === 'farmer') {
+      query = {
+        $or: [
+          { farmerId: userId },
+          { traderId: userId, role: 'farmer' }
+        ]
+      };
+    } else {
+      if (mongoose.Types.ObjectId.isValid(userId)) {
+        query._id = userId;
+      } else {
+        query = {
+          $or: [
+            { farmerId: userId },
+            { traderId: userId }
+          ]
+        };
+      }
+    }
+
+    const user = await Farmer.findOne(query)
+      .populate('commodities')
+      .populate('subcategories')
+      .populate('nearestMarkets');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const userData = user.toObject();
+    delete userData.security;
+    delete userData.__v;
+
+    res.status(200).json({
+      success: true,
+      data: userData
+    });
+  } catch (error) {
+    console.error('Error in getUserProfile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+exports.getProfileById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      const user = await Farmer.findById(id)
+        .populate('commodities')
+        .populate('subcategories')
+        .populate('nearestMarkets');
+
+      if (user) {
+        const userData = user.toObject();
+        delete userData.security;
+        delete userData.__v;
+
+        return res.status(200).json({
+          success: true,
+          data: userData
+        });
+      }
+    }
+
+    const user = await Farmer.findOne({
+      $or: [
+        { farmerId: id },
+        { traderId: id }
+      ]
+    })
+    .populate('commodities')
+    .populate('subcategories')
+    .populate('nearestMarkets');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const userData = user.toObject();
+    delete userData.security;
+    delete userData.__v;
+
+    res.status(200).json({
+      success: true,
+      data: userData
+    });
+  } catch (error) {
+    console.error('Error in getProfileById:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+exports.updateTraderProfile = async (req, res) => {
+  try {
+    const { traderId } = req.params;
+    const updateData = req.body;
+
+    console.log('🔧 Updating trader profile for:', traderId);
+    console.log('Update data keys:', Object.keys(updateData));
+    
+    // Log nearestMarkets for debugging
+    if (updateData.nearestMarkets) {
+      console.log('📌 nearestMarkets received:', typeof updateData.nearestMarkets);
+      if (typeof updateData.nearestMarkets === 'string') {
+        console.log('📌 nearestMarkets is a string, trying to parse...');
+      }
+    }
+
+    const trader = await Farmer.findOne({
+      $or: [
+        { traderId: traderId },
+        { farmerId: traderId }
+      ]
+    });
+
+    if (!trader) {
+      console.log('❌ Trader not found for update:', traderId);
+      return res.status(404).json({
+        success: false,
+        message: 'Trader not found'
+      });
+    }
+
+    console.log('✅ Found trader:', trader._id, 'Name:', trader.personalInfo?.name);
+
+    // Create update object using $set for individual fields
+    const updateObj = {};
+    
+    // Helper function to add nested updates
+    const addNestedUpdates = (prefix, data) => {
+      if (!data || typeof data !== 'object') return;
+      
+      Object.keys(data).forEach(key => {
+        if (data[key] !== undefined && data[key] !== null) {
+          updateObj[`${prefix}.${key}`] = data[key];
+        }
+      });
+    };
+
+    // Handle personalInfo updates
+    if (updateData.personalInfo) {
+      console.log('📝 Processing personalInfo updates');
+      addNestedUpdates('personalInfo', updateData.personalInfo);
+      delete updateData.personalInfo;
+    }
+
+    // Handle bankDetails updates
+    if (updateData.bankDetails) {
+      console.log('📝 Processing bankDetails updates');
+      addNestedUpdates('bankDetails', updateData.bankDetails);
+      delete updateData.bankDetails;
+    }
+
+    // Handle farmLocation updates
+    if (updateData.farmLocation) {
+      console.log('📝 Processing farmLocation updates');
+      addNestedUpdates('farmLocation', updateData.farmLocation);
+      delete updateData.farmLocation;
+    }
+
+    // Handle farmLand updates
+    if (updateData.farmLand) {
+      console.log('📝 Processing farmLand updates');
+      addNestedUpdates('farmLand', updateData.farmLand);
+      delete updateData.farmLand;
+    }
+
+    // Handle nearestMarkets specially
+    if (updateData.nearestMarkets) {
+      console.log('📝 Processing nearestMarkets updates');
+      
+      let marketsArray = updateData.nearestMarkets;
+      
+      // If it's a string, try to parse it as JSON
+      if (typeof marketsArray === 'string') {
+        try {
+          console.log('📌 Parsing nearestMarkets string');
+          marketsArray = JSON.parse(marketsArray);
+          console.log('📌 Successfully parsed nearestMarkets');
+        } catch (parseError) {
+          console.log('❌ Failed to parse nearestMarkets as JSON:', parseError.message);
+          // If parsing fails, it might be a single market object string
+          try {
+            // Try to clean up the string and parse
+            const cleanedString = marketsArray.replace(/\n/g, '').replace(/\s+/g, ' ');
+            marketsArray = JSON.parse(cleanedString);
+            console.log('📌 Successfully parsed after cleaning');
+          } catch (e) {
+            console.log('❌ Still failed to parse, treating as string array');
+          }
+        }
+      }
+      
+      if (Array.isArray(marketsArray)) {
+        console.log('📌 nearestMarkets is an array, length:', marketsArray.length);
+        
+        if (marketsArray.length > 0) {
+          const firstItem = marketsArray[0];
+          console.log('📌 First item type:', typeof firstItem);
+          console.log('📌 First item:', firstItem);
+          
+          // Check if it's market objects (has marketName) or ObjectIds
+          if (typeof firstItem === 'object' && firstItem.marketName) {
+            console.log('⚠️ Market objects detected, not ObjectIds');
+            console.log('ℹ️ Market object structure:', Object.keys(firstItem));
+            
+            // Option 1: Try to find or create Market documents
+            // This requires a Market model
+            try {
+              const marketIds = [];
+              
+              for (const marketObj of marketsArray) {
+                if (!marketObj.marketName) continue;
+                
+                // Try to find existing market by name and location
+                let market = await Market.findOne({
+                  marketName: marketObj.marketName,
+                  district: marketObj.district || '',
+                  state: marketObj.state || ''
+                });
+                
+                // If not found, create a new market
+                if (!market) {
+                  market = new Market({
+                    marketName: marketObj.marketName,
+                    place: marketObj.place || '',
+                    district: marketObj.district || '',
+                    state: marketObj.state || '',
+                    pincode: marketObj.pincode || '',
+                    isActive: true
+                  });
+                  await market.save();
+                  console.log(`✅ Created new market: ${marketObj.marketName}`);
+                }
+                
+                marketIds.push(market._id);
+              }
+              
+              if (marketIds.length > 0) {
+                updateObj.nearestMarkets = marketIds;
+                console.log(`✅ Converted ${marketIds.length} market objects to Market IDs`);
+              } else {
+                console.log('⚠️ No valid market IDs generated, skipping nearestMarkets update');
+              }
+              
+            } catch (marketError) {
+              console.log('❌ Error processing markets:', marketError.message);
+              // If Market model doesn't exist or fails, skip nearestMarkets
+              console.log('⚠️ Skipping nearestMarkets update due to error');
+            }
+          } else {
+            // Assume they're ObjectIds or strings that can be cast to ObjectId
+            console.log('✅ Setting nearestMarkets as provided array');
+            updateObj.nearestMarkets = marketsArray;
+          }
+        } else {
+          // Empty array
+          updateObj.nearestMarkets = [];
+        }
+      } else {
+        console.log('⚠️ nearestMarkets is not an array, skipping');
+      }
+      
+      delete updateData.nearestMarkets;
+    }
+
+    // Handle other direct field updates
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] !== undefined && updateData[key] !== null) {
+        // Skip fields that shouldn't be updated
+        if (!['_id', 'security', 'registeredAt', 'farmerId', 'traderId', '__v'].includes(key)) {
+          updateObj[key] = updateData[key];
+        }
+      }
+    });
+
+    console.log('📝 Final update object keys:', Object.keys(updateObj));
+
+    // If no updates, return early
+    if (Object.keys(updateObj).length === 0) {
+      console.log('⚠️ No valid updates to apply');
+      return res.status(400).json({
+        success: false,
+        message: 'No valid updates provided'
+      });
+    }
+
+    const updatedTrader = await Farmer.findByIdAndUpdate(
+      trader._id,
+      { $set: updateObj },
+      { new: true, runValidators: true }
+    )
+    .populate('commodities')
+    .populate('subcategories')
+    .populate('nearestMarkets')
+    .select('-security.mpin -security.password');
+
+    if (!updatedTrader) {
+      return res.status(404).json({
+        success: false,
+        message: 'Update failed'
+      });
+    }
+
+    const traderData = updatedTrader.toObject();
+    delete traderData.security;
+    delete traderData.__v;
+
+    console.log('✅ Trader updated successfully');
+
+    res.status(200).json({
+      success: true,
+      message: 'Trader profile updated successfully',
+      data: traderData
+    });
+  } catch (error) {
+    console.error('❌ Error in updateTraderProfile:', error);
+    
+    // More detailed error logging
+    if (error.name === 'CastError') {
+      console.error('🔴 CastError details:', {
+        path: error.path,
+        valueType: typeof error.value,
+        value: error.value,
+        message: error.message,
+        reason: error.reason?.message
+      });
+    } else if (error.name === 'ValidationError') {
+      console.error('🔴 ValidationError:', error.message);
+      Object.keys(error.errors || {}).forEach(key => {
+        console.error(`  ${key}:`, error.errors[key].message);
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update trader profile',
+      error: error.message,
+      errorType: error.name,
+      ...(error.name === 'CastError' && {
+        errorDetails: {
+          path: error.path,
+          value: error.value
+        }
+      })
     });
   }
 };

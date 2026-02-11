@@ -1,4 +1,3 @@
-// controllers/transportController.js
 const Order = require("../models/order");
 const Product = require("../models/product");
 const Market = require("../models/Market");
@@ -22,8 +21,8 @@ exports.getEligibleOrdersForTransporter = async (req, res) => {
       $or: [
         { "marketToTraderTransport.status": "pending" },
         { "marketToTraderTransport.status": { $exists: false } },
-        { "marketToTraderTransport.status": null }
-      ]
+        { "marketToTraderTransport.status": null },
+      ],
     }).sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -44,7 +43,14 @@ exports.getEligibleOrdersForTransporter = async (req, res) => {
 // Transporter accepts offer
 exports.acceptTransportOffer = async (req, res) => {
   try {
-    const { orderId, transporterId, transporterName, transporterMobile, pickupLocation, deliveryLocation } = req.body;
+    const {
+      orderId,
+      transporterId,
+      transporterName,
+      transporterMobile,
+      pickupLocation,
+      deliveryLocation,
+    } = req.body;
 
     const order = await Order.findOne({ orderId });
 
@@ -85,14 +91,18 @@ exports.acceptTransportOffer = async (req, res) => {
       transporterId,
       transporterName,
       transporterMobile,
-      pickupLocation: pickupLocation || order.marketToTraderTransport?.pickupLocation,
-      deliveryLocation: deliveryLocation || order.marketToTraderTransport?.deliveryLocation,
+      pickupLocation:
+        pickupLocation || order.marketToTraderTransport?.pickupLocation,
+      deliveryLocation:
+        deliveryLocation || order.marketToTraderTransport?.deliveryLocation,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     // Send notification to admin
-    console.log(`Notification: Transporter ${transporterName} accepted order ${orderId}`);
+    console.log(
+      `Notification: Transporter ${transporterName} accepted order ${orderId}`,
+    );
 
     await order.save();
 
@@ -163,7 +173,19 @@ exports.startJourney = async (req, res) => {
       });
     }
 
-    if (!order.marketToTraderTransport) {
+    // if (!order.marketToTraderTransport) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Transport not initiated for this order",
+    //   });
+    // }
+
+    //aravind
+
+    if (
+      !order.marketToTraderTransport ||
+      !order.marketToTraderTransport.transporterId
+    ) {
       return res.status(400).json({
         success: false,
         message: "Transport not initiated for this order",
@@ -171,7 +193,10 @@ exports.startJourney = async (req, res) => {
     }
 
     // Check if transporter is authorized
-    if (order.marketToTraderTransport.transporterId !== transporterId) {
+    if (
+      order.marketToTraderTransport.transporterId?.toString() !==
+      transporterId?.toString()
+    ) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized transporter",
@@ -179,12 +204,21 @@ exports.startJourney = async (req, res) => {
     }
 
     // Check if already started
-    if (order.marketToTraderTransport.status === "in_progress") {
-      return res.status(400).json({
-        success: false,
-        message: "Journey already started",
-      });
-    }
+    // if (order.marketToTraderTransport.status === "in_progress") {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Journey already started",
+    //   });
+    // }
+//ar
+
+    if (order.marketToTraderTransport.status !== "accepted") {
+  return res.status(400).json({
+    success: false,
+    message: "Transport not in accepted state",
+  });
+}
+
 
     // Verify pickup key (from admin)
     if (!order.marketToTraderTransport.adminGeneratedKey) {
@@ -194,12 +228,25 @@ exports.startJourney = async (req, res) => {
       });
     }
 
-    if (order.marketToTraderTransport.adminGeneratedKey !== pickupKey) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid pickup key",
-      });
-    }
+    // if (order.marketToTraderTransport.adminGeneratedKey !== pickupKey) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Invalid pickup key",
+    //   });
+    // }
+    //ara
+
+   if (
+  order.marketToTraderTransport.adminGeneratedKey?.toUpperCase() !==
+  pickupKey?.toUpperCase()
+) {
+  return res.status(400).json({
+    success: false,
+    message: "Invalid pickup key",
+  });
+}
+
+
 
     // Update status and timestamps
     order.marketToTraderTransport.status = "in_progress";
@@ -208,7 +255,9 @@ exports.startJourney = async (req, res) => {
     order.marketToTraderTransport.updatedAt = new Date();
 
     // Send notification to admin and trader
-    console.log(`Notification: Transporter started journey for order ${orderId}`);
+    console.log(
+      `Notification: Transporter started journey for order ${orderId}`,
+    );
 
     await order.save();
 
@@ -249,7 +298,10 @@ exports.completeJourney = async (req, res) => {
     }
 
     // Check if transporter is authorized
-    if (order.marketToTraderTransport.transporterId !== transporterId) {
+    if (
+      order.marketToTraderTransport.transporterId?.toString() !==
+      transporterId?.toString()
+    ) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized transporter",
@@ -328,13 +380,13 @@ exports.getAdminTransportOrders = async (req, res) => {
     } else {
       // Show all orders that have marketToTraderTransport or are eligible
       filter["$or"] = [
-        { "marketToTraderTransport": { $exists: true } },
+        { marketToTraderTransport: { $exists: true } },
         {
-          "marketToTraderTransport": { $exists: false },
+          marketToTraderTransport: { $exists: false },
           "traderToAdminPayment.paymentStatus": "paid",
           "traderToAdminPayment.remainingAmount": 0,
-          transporterStatus: "completed"
-        }
+          transporterStatus: "completed",
+        },
       ];
     }
 
@@ -371,7 +423,10 @@ exports.assignTransporter = async (req, res) => {
     }
 
     // Check if order is accepted by transporter
-    if (!order.marketToTraderTransport || order.marketToTraderTransport.status !== "accepted") {
+    if (
+      !order.marketToTraderTransport ||
+      order.marketToTraderTransport.status !== "accepted"
+    ) {
       return res.status(400).json({
         success: false,
         message: "Transporter has not accepted this order yet",
@@ -379,7 +434,10 @@ exports.assignTransporter = async (req, res) => {
     }
 
     // Check if transporter matches
-    if (order.marketToTraderTransport.transporterId !== transporterId) {
+    if (
+      order.marketToTraderTransport.transporterId?.toString() !==
+      transporterId?.toString()
+    ) {
       return res.status(400).json({
         success: false,
         message: "Not authorized for this transporter",
@@ -428,7 +486,9 @@ exports.getTransporterAcceptedOrders = async (req, res) => {
 
     const orders = await Order.find({
       "marketToTraderTransport.transporterId": transporterId,
-      "marketToTraderTransport.status": { $in: ['accepted', 'in_progress', 'completed'] }
+      "marketToTraderTransport.status": {
+        $in: ["accepted", "in_progress", "completed"],
+      },
     }).sort({ createdAt: -1 });
 
     res.status(200).json({

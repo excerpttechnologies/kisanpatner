@@ -6,8 +6,8 @@ const bcrypt = require('bcryptjs');
 
 const SECRET = process.env.JWT_SECRET || 'supersecret';
 
-// Prepare user response with all necessary fields
-const prepareUserResponse = (user) => {
+// Prepare minimal response (your original function)
+const prepareMinimalResponse = (user) => {
   const responseData = {
     id: user._id,
     name: user.personalInfo.name,
@@ -31,7 +31,18 @@ const prepareUserResponse = (user) => {
   return responseData;
 };
 
-// Simple login endpoint to issue JWT (mobileNo + mpin/password)
+// Prepare full user object without sensitive fields
+const prepareFullUserResponse = (user) => {
+  const userObj = user.toObject();
+  
+  // Remove sensitive fields
+  delete userObj.security;
+  delete userObj.__v;
+  
+  return userObj;
+};
+
+// Simple login endpoint to issue JWT
 router.post('/login', async (req, res) => {
   try {
     const { mobileNo, mpin, password } = req.body;
@@ -49,7 +60,12 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign({ id: user._id, role: user.role }, SECRET, { expiresIn: '7d' });
 
-    return res.json({ success: true, token, data: prepareUserResponse(user) });
+    return res.json({ 
+      success: true, 
+      token, 
+      data: prepareMinimalResponse(user), // Your existing minimal response
+      user: prepareFullUserResponse(user) // Full user object without sensitive data
+    });
   } catch (err) {
     console.error('auth/login error:', err);
     return res.status(500).json({ success: false, message: 'Server error' });

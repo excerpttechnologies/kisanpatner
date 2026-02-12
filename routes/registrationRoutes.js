@@ -14,27 +14,30 @@ router.post("/save-step", (req, res) => {
     id = Date.now().toString();
   }
 
-  // Clear existing timer if any (prevents multiple timers)
+  // Clear existing timer if any
   if (partialRegistrations[id]) {
     clearTimeout(partialRegistrations[id].timer);
   }
 
-  // Set NEW 8-minute timer
+  // ✅ FIX: Capture the current ID value for the timer
+  const currentId = id;
+
+  // Set NEW 8-minute timer with captured ID
   const timer = setTimeout(async () => {
-    // Check if registration still exists AND is not completed
-    if (partialRegistrations[id] && !partialRegistrations[id].completed) {
-      console.log(`⏰ 8 minutes timeout for registration ${id} - sending email...`);
+    // ✅ Use captured currentId instead of closure variable
+    if (partialRegistrations[currentId] && !partialRegistrations[currentId].completed) {
+      console.log(`⏰ 8 minutes timeout for registration ${currentId} - sending email...`);
       try {
         await sendIncompleteMail({
-          registrationId: id,
-          ...partialRegistrations[id].data,
+          registrationId: currentId,
+          ...partialRegistrations[currentId].data,
           timeoutAt: new Date().toISOString()
         });
-        console.log(`✅ Incomplete registration email sent for ${id}`);
+        console.log(`✅ Incomplete registration email sent for ${currentId}`);
       } catch (error) {
-        console.log(`❌ Failed to send email for ${id}:`, error.message);
+        console.log(`❌ Failed to send email for ${currentId}:`, error.message);
       }
-      delete partialRegistrations[id];
+      delete partialRegistrations[currentId];
     }
   }, 8 * 60 * 1000); // 8 minutes
 
@@ -45,7 +48,7 @@ router.post("/save-step", (req, res) => {
       savedAt: new Date().toISOString()
     },
     timer: timer,
-    completed: false, // Track if registration was completed
+    completed: false,
     createdAt: new Date().toISOString()
   };
 
@@ -62,7 +65,7 @@ router.post("/complete-registration", (req, res) => {
     partialRegistrations[registrationId].completed = true;
     clearTimeout(partialRegistrations[registrationId].timer);
     
-    // Option 1: Delete immediately (no email will be sent)
+    // Delete immediately (no email will be sent)
     delete partialRegistrations[registrationId];
     
     console.log(`✅ Registration ${registrationId} completed successfully`);
@@ -76,7 +79,7 @@ router.post("/complete-registration", (req, res) => {
   });
 });
 
-// Optional: Get pending registrations (for monitoring)
+// Get pending registrations (for monitoring)
 router.get("/pending-registrations", (req, res) => {
   const pending = Object.keys(partialRegistrations).map(id => ({
     id,

@@ -160,6 +160,15 @@ app.use("/api/transporter", require("./routes/transporterRoutes"));
 app.use("/api/admin", require("./routes/adminorderRoutes"));
 app.use("/api/orders/history", require("./routes/orderhistoryRoutes"));
 app.use("/api/register", registrationRoutes);
+
+// ── B2B Marketplace (NEW) ────────────────────────────────────────
+app.use('/api/auth',         require('./routes/marketAuthRoutes'));
+app.use('/api/location',     require('./routes/locationRoutes'));
+app.use('/api/products',     require('./routes/marketProductRoutes'));
+app.use('/api/cart',         require('./routes/cartRoutes'));
+app.use('/api/market-orders',require('./routes/marketOrderRoutes'));
+app.use('/api/dashboard',    require('./routes/dashboardRoutes'));
+app.use('/api/profile',      require('./routes/marketProfileRoutes'));
 // =======================
 // Frontend (SPA)
 // =======================

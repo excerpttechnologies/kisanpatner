@@ -90,6 +90,7 @@ const app = express();
 const cropcareCartRoutes = require('./routes/cropcareCartRoutes');
 const razorpayRoutes = require('./routes/razorpayRoutes');
 const registrationRoutes = require("./routes/registrationRoutes");
+const marketRoute = require("./routes/marketAuthRoutes");
 
 // Middlewares
 // =======================
@@ -128,6 +129,9 @@ try {
 } catch (e) {
   console.warn('Could not mount tracking controller safety-net:', e.message || e);
 }
+
+///B2B
+app.use(marketRoute)
 
 // =======================
 // Farmer & Auth

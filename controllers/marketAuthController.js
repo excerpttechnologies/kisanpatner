@@ -770,6 +770,20 @@ exports.b2bUpdateProfile = async (req, res) => {
     if (taluk)        user.taluk        = taluk;
     if (village)      user.village      = village;
 
+
+
+
+    if (req.body.bankDetails) {
+  const b = req.body.bankDetails;
+  user.bankDetails = {
+    accountHolderName: b.accountHolderName?.trim() || '',
+    accountNumber:     b.accountNumber?.trim()     || '',
+    ifscCode:          b.ifscCode?.trim().toUpperCase() || '',
+    bankName:          b.bankName?.trim()          || '',
+    branchName:        b.branchName?.trim()        || '',
+    upiId:             b.upiId?.trim()             || '',
+  };
+}
     await user.save();
     return res.json({ success: true, message: 'Profile updated successfully', data: user.toSafeObject() });
 

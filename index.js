@@ -79,24 +79,184 @@
 // const PORT = process.env.PORT || 8080;
 // console.log('Mounted routes:', listRoutes());
 // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-require('dotenv').config();
+
+
+
+
+// require('dotenv').config();
+// const express = require("express");
+// const cors = require("cors");
+// const connectDB = require("./config/db");
+// const path = require("path");
+// const history = require('connect-history-api-fallback');
+
+// const app = express();
+// const cropcareCartRoutes = require('./routes/cropcareCartRoutes');
+// const razorpayRoutes = require('./routes/razorpayRoutes');
+// const registrationRoutes = require("./routes/registrationRoutes");
+// const marketRoute = require("./routes/marketAuthRoutes");
+
+// // Middlewares
+// // =======================
+// app.use(cors());
+// app.use(express.json({ limit: '50mb' }));
+// app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// // =======================
+// // DB Connection
+// // =======================
+// connectDB();
+
+// // =======================
+// // Static files
+// // =======================
+// app.use('/uploads', express.static('uploads'));
+
+// // =======================
+// // Core Routes
+// // =======================
+// app.use("/category", require("./routes/categoryRoutes"));
+// app.use("/subcategory", require("./routes/subcategory"));
+
+// // =======================
+// // Crop & Tracking
+// // =======================
+// app.use('/crop', require('./routes/cropRoutes'));
+// app.use('/tracking', require('./routes/trackingRoutes'));
+// app.use('/api/cropcare', cropcareCartRoutes);
+// app.use('/api/payment', razorpayRoutes);
+// // Safety-net: tracking fallback
+// try {
+//   const trackingController = require('./controllers/trackingController');
+//   app.post('/tracking/init', trackingController.createOrInit);
+//   app.get('/tracking/by-name', trackingController.getByName);
+// } catch (e) {
+//   console.warn('Could not mount tracking controller safety-net:', e.message || e);
+// }
+
+// ///B2B
+// app.use(marketRoute)
+
+// // =======================
+// // Farmer & Auth
+// // =======================
+// app.use("/farmer/register", require("./routes/farmerRoutes"));
+// app.use("/farmer", require("./routes/authroutes"));
+// app.use('/api/cropcare', cropcareCartRoutes);
+// app.use('/api/payment', razorpayRoutes);
+// // =======================
+// // Product
+// // =======================
+// app.use('/product', require('./routes/productRoutes'));
+
+// // =======================
+// // Transport & Payment
+// // =======================
+// //app.use('/transport', require('./routes/transportRoutes'));
+// app.use('/payment', require('./routes/traderpaymentroutes'));
+
+// // =======================
+// // ✅ NEWLY ADDED ROUTES
+// // =======================
+// app.use("/api/market", require("./routes/marketRoutes"));
+// app.use("/api/packaging", require("./routes/quantitytyperRoutes"));
+
+// app.use("/api/commission", require("./routes/commissionRoutes"));
+// app.use("/api/orders", require("./routes/orderRoutes"));
+// app.use("/api/payment", require("./routes/paymentRoutes"));
+// app.use("/api/transporter", require("./routes/transporterRoutes"));
+// app.use("/api/admin", require("./routes/adminorderRoutes"));
+// app.use("/api/orders/history", require("./routes/orderhistoryRoutes"));
+// app.use("/api/register", registrationRoutes);
+
+// // ── B2B Marketplace (NEW) ────────────────────────────────────────
+// app.use('/api/auth',         require('./routes/marketAuthRoutes'));
+// app.use('/api/location',     require('./routes/locationRoutes'));
+// app.use('/api/products',     require('./routes/marketProductRoutes'));
+// app.use('/api/cart',         require('./routes/cartRoutes'));
+// app.use('/api/market-orders',require('./routes/marketOrderRoutes'));
+// app.use('/api/dashboard',    require('./routes/dashboardRoutes'));
+// app.use('/api/profile',      require('./routes/marketProfileRoutes'));
+
+// // app.use('/api/b2b-products', require('./routes/b2bProductRoutes')); // B2B products (admin listed)
+// app.use('/api/b2b',          require('./routes/b2bCartRoutes'));     // B2B cart + orders
+// // =======================
+// // Frontend (SPA)
+// // =======================
+// app.use(history());
+// app.use(express.static(path.join(__dirname, 'dist')));
+
+// // =======================
+// // Debug helper
+// // =======================
+// function listRoutes() {
+//   const routes = [];
+//   if (!app._router) return routes;
+
+//   app._router.stack.forEach((layer) => {
+//     if (layer.route && layer.route.path) {
+//       const methods = Object.keys(layer.route.methods)
+//         .map(m => m.toUpperCase())
+//         .join(',');
+//       routes.push(`${methods} ${layer.route.path}`);
+//     } else if (layer.name === 'router' && layer.handle?.stack) {
+//       layer.handle.stack.forEach((l) => {
+//         if (l.route && l.route.path) {
+//           const methods = Object.keys(l.route.methods)
+//             .map(m => m.toUpperCase())
+//             .join(',');
+//           routes.push(`${methods} ${l.route.path}`);
+//         }
+//       });
+//     }
+//   });
+
+//   return routes;
+// }
+
+// app.get('/_routes', (req, res) => {
+//   res.json({ success: true, routes: listRoutes() });
+// });
+
+// // =======================
+// // Server
+// // =======================
+// const PORT = process.env.PORT || 8080;
+// console.log('Mounted routes:', listRoutes());
+// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+
+
+
+
+
+
+
+
+
+
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const path = require("path");
-const history = require('connect-history-api-fallback');
+const history = require("connect-history-api-fallback");
 
 const app = express();
-const cropcareCartRoutes = require('./routes/cropcareCartRoutes');
-const razorpayRoutes = require('./routes/razorpayRoutes');
+const cropcareCartRoutes = require("./routes/cropcareCartRoutes");
+const razorpayRoutes = require("./routes/razorpayRoutes");
 const registrationRoutes = require("./routes/registrationRoutes");
 const marketRoute = require("./routes/marketAuthRoutes");
+const B2BRoutes = require("./routes/b2bRoutes");
+const morgan = require("morgan");
 
 // Middlewares
 // =======================
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(morgan("dev"));
 
 // =======================
 // DB Connection
@@ -106,7 +266,7 @@ connectDB();
 // =======================
 // Static files
 // =======================
-app.use('/uploads', express.static('uploads'));
+app.use("/uploads", express.static("uploads"));
 
 // =======================
 // Core Routes
@@ -114,42 +274,48 @@ app.use('/uploads', express.static('uploads'));
 app.use("/category", require("./routes/categoryRoutes"));
 app.use("/subcategory", require("./routes/subcategory"));
 
+///b2b routes
+app.use("/api/b2b", B2BRoutes);
+
 // =======================
 // Crop & Tracking
 // =======================
-app.use('/crop', require('./routes/cropRoutes'));
-app.use('/tracking', require('./routes/trackingRoutes'));
-app.use('/api/cropcare', cropcareCartRoutes);
-app.use('/api/payment', razorpayRoutes);
+app.use("/crop", require("./routes/cropRoutes"));
+app.use("/tracking", require("./routes/trackingRoutes"));
+app.use("/api/cropcare", cropcareCartRoutes);
+app.use("/api/payment", razorpayRoutes);
 // Safety-net: tracking fallback
 try {
-  const trackingController = require('./controllers/trackingController');
-  app.post('/tracking/init', trackingController.createOrInit);
-  app.get('/tracking/by-name', trackingController.getByName);
+  const trackingController = require("./controllers/trackingController");
+  app.post("/tracking/init", trackingController.createOrInit);
+  app.get("/tracking/by-name", trackingController.getByName);
 } catch (e) {
-  console.warn('Could not mount tracking controller safety-net:', e.message || e);
+  console.warn(
+    "Could not mount tracking controller safety-net:",
+    e.message || e,
+  );
 }
 
 ///B2B
-app.use(marketRoute)
+app.use(marketRoute);
 
 // =======================
 // Farmer & Auth
 // =======================
 app.use("/farmer/register", require("./routes/farmerRoutes"));
 app.use("/farmer", require("./routes/authroutes"));
-app.use('/api/cropcare', cropcareCartRoutes);
-app.use('/api/payment', razorpayRoutes);
+app.use("/api/cropcare", cropcareCartRoutes);
+app.use("/api/payment", razorpayRoutes);
 // =======================
 // Product
 // =======================
-app.use('/product', require('./routes/productRoutes'));
+app.use("/product", require("./routes/productRoutes"));
 
 // =======================
 // Transport & Payment
 // =======================
 //app.use('/transport', require('./routes/transportRoutes'));
-app.use('/payment', require('./routes/traderpaymentroutes'));
+app.use("/payment", require("./routes/traderpaymentroutes"));
 
 // =======================
 // ✅ NEWLY ADDED ROUTES
@@ -161,23 +327,27 @@ app.use("/api/commission", require("./routes/commissionRoutes"));
 app.use("/api/orders", require("./routes/orderRoutes"));
 app.use("/api/payment", require("./routes/paymentRoutes"));
 app.use("/api/transporter", require("./routes/transporterRoutes"));
+
+
+
+
 app.use("/api/admin", require("./routes/adminorderRoutes"));
 app.use("/api/orders/history", require("./routes/orderhistoryRoutes"));
 app.use("/api/register", registrationRoutes);
 
 // ── B2B Marketplace (NEW) ────────────────────────────────────────
-app.use('/api/auth',         require('./routes/marketAuthRoutes'));
-app.use('/api/location',     require('./routes/locationRoutes'));
-app.use('/api/products',     require('./routes/marketProductRoutes'));
-app.use('/api/cart',         require('./routes/cartRoutes'));
-app.use('/api/market-orders',require('./routes/marketOrderRoutes'));
-app.use('/api/dashboard',    require('./routes/dashboardRoutes'));
-app.use('/api/profile',      require('./routes/marketProfileRoutes'));
+app.use("/api/auth", require("./routes/marketAuthRoutes"));
+app.use("/api/location", require("./routes/locationRoutes"));
+app.use("/api/products", require("./routes/marketProductRoutes"));
+app.use("/api/cart", require("./routes/cartRoutes"));
+app.use("/api/market-orders", require("./routes/marketOrderRoutes"));
+app.use("/api/dashboard", require("./routes/dashboardRoutes"));
+app.use("/api/profile", require("./routes/marketProfileRoutes"));
 // =======================
 // Frontend (SPA)
 // =======================
 app.use(history());
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, "dist")));
 
 // =======================
 // Debug helper
@@ -189,15 +359,15 @@ function listRoutes() {
   app._router.stack.forEach((layer) => {
     if (layer.route && layer.route.path) {
       const methods = Object.keys(layer.route.methods)
-        .map(m => m.toUpperCase())
-        .join(',');
+        .map((m) => m.toUpperCase())
+        .join(",");
       routes.push(`${methods} ${layer.route.path}`);
-    } else if (layer.name === 'router' && layer.handle?.stack) {
+    } else if (layer.name === "router" && layer.handle?.stack) {
       layer.handle.stack.forEach((l) => {
         if (l.route && l.route.path) {
           const methods = Object.keys(l.route.methods)
-            .map(m => m.toUpperCase())
-            .join(',');
+            .map((m) => m.toUpperCase())
+            .join(",");
           routes.push(`${methods} ${l.route.path}`);
         }
       });
@@ -207,7 +377,7 @@ function listRoutes() {
   return routes;
 }
 
-app.get('/_routes', (req, res) => {
+app.get("/_routes", (req, res) => {
   res.json({ success: true, routes: listRoutes() });
 });
 
@@ -215,5 +385,7 @@ app.get('/_routes', (req, res) => {
 // Server
 // =======================
 const PORT = process.env.PORT || 8080;
-console.log('Mounted routes:', listRoutes());
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+console.log("Mounted routes:", listRoutes());
+app.listen(PORT, () =>
+  console.log(`Server running on port http://localhost:${PORT}`),
+);

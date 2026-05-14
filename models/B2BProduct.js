@@ -110,8 +110,21 @@ const b2bProductSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     viewCount: { type: Number, default: 0 },
+
+    averageRating: {
+      type: Number,
+      default: 0,
+    },
+
+    totalReviews: {
+      type: Number,
+      default: 0,
+    },
     Likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "B2BUser" }],
   },
+
+ 
+
   {
     timestamps: true,
     collection: "b2bproducts",

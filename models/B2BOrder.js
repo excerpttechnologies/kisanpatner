@@ -71,7 +71,7 @@ const paymentDetailsSchema = new mongoose.Schema({
   currency: { type: String, default: "INR" },
   status: {
     type: String,
-    enum: ["pending", "success", "failed"],
+    enum: ["pending", "success", "failed","refund","refunded"],
     default: "pending",
   },
   paymentMethod: { type: String, default: "razorpay" },

@@ -17,7 +17,7 @@ const b2bProductReviewSchema = new mongoose.Schema(
     rating: { type: Number, required: true, min: 1, max: 5 },
     title: { type: String, trim: true, maxlength: 100 },
     comment: { type: String, required: true, trim: true, maxlength: 1000 },
-    images: [{ type: String }], // Images uploaded for review
+    // images: [{ type: String }], 
     isVerifiedPurchase: { type: Boolean, default: false },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "B2BUser" }],
     replies: [

@@ -174,4 +174,27 @@ router.get(
   chatController.getSuggestedQuestions,
 );
 
+
+
+
+// ==================== REFUND ROUTES ====================
+// Get user's own refunds (with search & filters)
+router.get("/refunds", authenticateB2BUser, orderController.getMyRefunds);
+
+// Get single refund details
+router.get(
+  "/refunds/:refundId",
+  authenticateB2BUser,
+  orderController.getRefundDetails,
+);
+
+// ==================== ADMIN REFUND ROUTES ====================
+// Get all refunds (admin) - with search & filters
+router.get("/admin/refunds", orderController.getAllRefunds);
+
+// Admin manual refund by order ID
+router.post("/admin/refund/:orderId", orderController.adminRefund);
+
+
+
 module.exports = router;

@@ -18,7 +18,10 @@ const b2bAddressSchema = new mongoose.Schema(
     addressLine2: { type: String, default: "" },
     landmark: { type: String, default: "" },
     city: { type: String, required: true },
+    
     state: { type: String, required: true },
+    taluk:        { type: String, default: "" },  
+
     pincode: {
       type: String,
       required: true,

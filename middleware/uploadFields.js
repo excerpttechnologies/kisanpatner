@@ -166,10 +166,14 @@ const storage = multer.diskStorage({
 // Create multer instance with file size limits
 const upload = multer({
   storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB per file
-    files: 50, // Max 50 files total
-  },
+limits: {
+  fileSize: 5 * 1024 * 1024,     // 5 MB per file
+  files: 50,
+  fieldSize: 20 * 1024 * 1024,   // <-- IMPORTANT
+  fieldNameSize: 200,
+  fields: 500,
+  parts: 600,
+},
   fileFilter: (req, file, cb) => {
     // Log the file info for debugging
     console.log("📁 File received:", {
@@ -256,8 +260,11 @@ const uploadFields = (req, res, next) => {
 
   multerUpload(req, res, (err) => {
     if (err) {
-      console.error("Multer error:", err);
-
+console.error("========== MULTER ERROR ==========/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////");
+console.error("Code :", err.code);
+console.error("Field:", err.field);
+console.error("Message:", err.message);
+console.error(err);
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_UNEXPECTED_FILE") {
           console.warn(

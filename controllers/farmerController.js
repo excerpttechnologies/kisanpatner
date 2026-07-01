@@ -2583,6 +2583,225 @@ const buildUpdateObj = (
 };
 
 // ==================== UPDATE FARMER - FIXED (APPEND INSTEAD OF REPLACE) ====================
+// exports.updateFarmer = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const updateData = { ...req.body };
+
+//     console.log("📝 Update data received:", Object.keys(updateData));
+//     console.log(
+//       "📎 Files received:",
+//       req.files ? Object.keys(req.files) : "None",
+//     );
+
+//     // Find farmer using findUserById
+//     const farmer = await findUserById(id);
+//     if (!farmer) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Farmer not found" });
+//     }
+
+//     // Parse string fields that should be arrays
+//     if (updateData.commodities && typeof updateData.commodities === "string") {
+//       try {
+//         updateData.commodities = JSON.parse(updateData.commodities);
+//       } catch (e) {
+//         console.log("Failed to parse commodities, using empty array");
+//         updateData.commodities = [];
+//       }
+//     }
+
+//     if (
+//       updateData.subcategories &&
+//       typeof updateData.subcategories === "string"
+//     ) {
+//       try {
+//         updateData.subcategories = JSON.parse(updateData.subcategories);
+//       } catch (e) {
+//         console.log("Failed to parse subcategories, using empty array");
+//         updateData.subcategories = [];
+//       }
+//     }
+
+//     if (
+//       updateData.nearestMarkets &&
+//       typeof updateData.nearestMarkets === "string"
+//     ) {
+//       try {
+//         updateData.nearestMarkets = JSON.parse(updateData.nearestMarkets);
+//       } catch (e) {
+//         console.log("Failed to parse nearestMarkets, using empty array");
+//         updateData.nearestMarkets = [];
+//       }
+//     }
+
+//     ["personalInfo", "bankDetails", "farmLocation", "farmLand"].forEach(
+//       (field) => {
+//         if (updateData[field] && typeof updateData[field] === "string") {
+//           try {
+//             updateData[field] = JSON.parse(updateData[field]);
+//           } catch (e) {
+//             console.log(`Failed to parse ${field}`);
+//             updateData[field] = {};
+//           }
+//         }
+//       },
+//     );
+
+//     // Build dot-notation update object for nested fields
+//     const updateObj = buildUpdateObj(updateData, [
+//       "personalInfo",
+//       "bankDetails",
+//       "farmLocation",
+//       "farmLand",
+//     ]);
+
+//     // Handle nearestMarkets
+//     if (updateData.nearestMarkets !== undefined) {
+//       const marketIds = await processNearestMarkets(updateData.nearestMarkets);
+//       if (marketIds !== null && marketIds.length >= 0) {
+//         updateObj.nearestMarkets = marketIds;
+//       }
+//       delete updateData.nearestMarkets;
+//     }
+
+//     // Handle commodities - ensure it's an array
+//     if (updateData.commodities !== undefined) {
+//       updateObj.commodities = Array.isArray(updateData.commodities)
+//         ? updateData.commodities
+//         : [];
+//       delete updateData.commodities;
+//     }
+
+//     // Handle subcategories - ensure it's an array
+//     if (updateData.subcategories !== undefined) {
+//       updateObj.subcategories = Array.isArray(updateData.subcategories)
+//         ? updateData.subcategories
+//         : [];
+//       delete updateData.subcategories;
+//     }
+
+//     // ==================== FIXED: APPEND FILES INSTEAD OF REPLACE ====================
+//     if (req.files) {
+//       const role = farmer.role;
+//       console.log("📎 Processing file uploads for role:", role);
+
+//       // Helper function to APPEND files to existing array
+//       const appendFiles = (fieldName, targetField) => {
+//         if (req.files[fieldName] && req.files[fieldName].length > 0) {
+//           const processedFiles = processFiles(req.files[fieldName]);
+
+//           // Get current files from the farmer object
+//           const currentFiles = farmer.documents[fieldName] || [];
+
+//           // APPEND new files to existing ones
+//           const updatedFiles = [...currentFiles, ...processedFiles];
+
+//           updateObj[targetField] = updatedFiles;
+//           console.log(
+//             `📎 Appended ${processedFiles.length} file(s) to ${fieldName}. Total: ${updatedFiles.length} files`,
+//           );
+//         }
+//       };
+
+//       // Append all file types
+//       appendFiles("panCard", "documents.panCard");
+//       appendFiles("aadharFront", "documents.aadharFront");
+//       appendFiles("aadharBack", "documents.aadharBack");
+
+//       if (role === "farmer") {
+//         appendFiles("bankPassbook", "documents.bankPassbook");
+//       } else if (role === "trader") {
+//         appendFiles("businessLicense", "documents.businessLicense");
+//         appendFiles("photo", "documents.photo");
+//         appendFiles("businessNameBoard", "documents.businessNameBoard");
+//         appendFiles("bankPassbook", "documents.bankPassbook");
+//       }
+//     }
+
+//     // Block protected fields
+//     const blocked = [
+//       "_id",
+//       "farmerId",
+//       "traderId",
+//       "security",
+//       "registeredAt",
+//       "role",
+//       "__v",
+//     ];
+
+//     // Add remaining safe fields
+//     Object.keys(updateData).forEach((key) => {
+//       if (
+//         !blocked.includes(key) &&
+//         updateData[key] != null &&
+//         updateData[key] !== ""
+//       ) {
+//         updateObj[key] = updateData[key];
+//       }
+//     });
+
+//     // Handle agreements separately (for trader)
+//     if (updateData.agreements && typeof updateData.agreements === "object") {
+//       Object.keys(updateData.agreements).forEach((key) => {
+//         updateObj[`agreements.${key}`] = updateData.agreements[key];
+//       });
+//       delete updateData.agreements;
+//     }
+
+//     // Handle company fields separately (for trader)
+//     if (updateData.companyName !== undefined) {
+//       updateObj.companyName = updateData.companyName;
+//       delete updateData.companyName;
+//     }
+//     if (updateData.companyType !== undefined) {
+//       updateObj.companyType = updateData.companyType;
+//       delete updateData.companyType;
+//     }
+
+//     if (!Object.keys(updateObj).length) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "No valid updates provided" });
+//     }
+
+//     console.log("📝 Final update object:", JSON.stringify(updateObj, null, 2));
+
+//     const updatedFarmer = await Farmer.findByIdAndUpdate(
+//       farmer._id,
+//       { $set: updateObj },
+//       { new: true, runValidators: true },
+//     )
+//       .populate("commodities")
+//       .populate("subcategories")
+//       .populate("nearestMarkets")
+//       .select("-security.mpin -security.password");
+
+//     if (!updatedFarmer) {
+//       return res.status(404).json({ success: false, message: "Update failed" });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: `${farmer.role.charAt(0).toUpperCase() + farmer.role.slice(1)} updated successfully`,
+//       data: updatedFarmer,
+//     });
+//   } catch (error) {
+//     console.error("❌ Error updating farmer:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
+
+
+
+
 exports.updateFarmer = async (req, res) => {
   try {
     const { id } = req.params;
@@ -2682,45 +2901,105 @@ exports.updateFarmer = async (req, res) => {
       delete updateData.subcategories;
     }
 
-    // ==================== FIXED: APPEND FILES INSTEAD OF REPLACE ====================
-    if (req.files) {
+    
+    {
       const role = farmer.role;
-      console.log("📎 Processing file uploads for role:", role);
+      console.log("📎 Processing file uploads/removals for role:", role);
 
-      // Helper function to APPEND files to existing array
-      const appendFiles = (fieldName, targetField) => {
-        if (req.files[fieldName] && req.files[fieldName].length > 0) {
-          const processedFiles = processFiles(req.files[fieldName]);
+      const fileFieldId = (f) => (f && f._id ? String(f._id) : f && f.url);
 
-          // Get current files from the farmer object
-          const currentFiles = farmer.documents[fieldName] || [];
+      const buildFinalFiles = (fieldName, targetField) => {
+        const currentFiles = farmer.documents?.[fieldName] || [];
 
-          // APPEND new files to existing ones
-          const updatedFiles = [...currentFiles, ...processedFiles];
+        const existingRaw = updateData[`${fieldName}_existing`];
+        const removedRaw = updateData[`${fieldName}_removed`];
 
-          updateObj[targetField] = updatedFiles;
+        let keepList = currentFiles;
+        let touched = false;
+
+        // Narrow down to only the files the client says should remain
+        if (existingRaw !== undefined) {
+          touched = true;
+          try {
+            const existingParsed =
+              typeof existingRaw === "string"
+                ? JSON.parse(existingRaw)
+                : existingRaw;
+
+            const keepIds = new Set(
+              (existingParsed || [])
+                .map((f) => f._id || f.url)
+                .filter(Boolean)
+                .map(String),
+            );
+
+            keepList = currentFiles.filter((f) =>
+              keepIds.has(String(fileFieldId(f))),
+            );
+          } catch (e) {
+            console.log(`Failed to parse ${fieldName}_existing`, e);
+          }
+        }
+
+        // Explicitly strip anything the client says was removed, as a
+        // belt-and-suspenders safety net on top of the _existing filter
+        if (removedRaw !== undefined) {
+          touched = true;
+          try {
+            const removedParsed =
+              typeof removedRaw === "string"
+                ? JSON.parse(removedRaw)
+                : removedRaw;
+
+            const removeIds = new Set(
+              (removedParsed || []).filter(Boolean).map(String),
+            );
+
+            keepList = keepList.filter(
+              (f) => !removeIds.has(String(fileFieldId(f))),
+            );
+          } catch (e) {
+            console.log(`Failed to parse ${fieldName}_removed`, e);
+          }
+        }
+
+        // Append newly uploaded files on top of the (possibly filtered) keep list
+        let newFiles = [];
+        if (
+          req.files &&
+          req.files[fieldName] &&
+          req.files[fieldName].length > 0
+        ) {
+          newFiles = processFiles(req.files[fieldName]);
+          touched = true;
+        }
+
+        if (touched) {
+          const finalFiles = [...keepList, ...newFiles];
+          updateObj[targetField] = finalFiles;
           console.log(
-            `📎 Appended ${processedFiles.length} file(s) to ${fieldName}. Total: ${updatedFiles.length} files`,
+            `📎 ${fieldName}: kept ${keepList.length}, added ${newFiles.length}, total ${finalFiles.length}`,
           );
         }
       };
 
-      // Append all file types
-      appendFiles("panCard", "documents.panCard");
-      appendFiles("aadharFront", "documents.aadharFront");
-      appendFiles("aadharBack", "documents.aadharBack");
+      buildFinalFiles("panCard", "documents.panCard");
+      buildFinalFiles("aadharFront", "documents.aadharFront");
+      buildFinalFiles("aadharBack", "documents.aadharBack");
 
       if (role === "farmer") {
-        appendFiles("bankPassbook", "documents.bankPassbook");
+        buildFinalFiles("bankPassbook", "documents.bankPassbook");
       } else if (role === "trader") {
-        appendFiles("businessLicense", "documents.businessLicense");
-        appendFiles("photo", "documents.photo");
-        appendFiles("businessNameBoard", "documents.businessNameBoard");
-        appendFiles("bankPassbook", "documents.bankPassbook");
+        buildFinalFiles("businessLicense", "documents.businessLicense");
+        buildFinalFiles("photo", "documents.photo");
+        buildFinalFiles("businessNameBoard", "documents.businessNameBoard");
+        buildFinalFiles("bankPassbook", "documents.bankPassbook");
       }
     }
 
-    // Block protected fields
+    // Block protected fields — also blocks the raw _existing/_removed
+    // helper fields so they never leak into the document as stray
+    // top-level keys.
     const blocked = [
       "_id",
       "farmerId",
@@ -2729,6 +3008,20 @@ exports.updateFarmer = async (req, res) => {
       "registeredAt",
       "role",
       "__v",
+      "panCard_existing",
+      "panCard_removed",
+      "aadharFront_existing",
+      "aadharFront_removed",
+      "aadharBack_existing",
+      "aadharBack_removed",
+      "bankPassbook_existing",
+      "bankPassbook_removed",
+      "businessLicense_existing",
+      "businessLicense_removed",
+      "photo_existing",
+      "photo_removed",
+      "businessNameBoard_existing",
+      "businessNameBoard_removed",
     ];
 
     // Add remaining safe fields
@@ -2766,8 +3059,21 @@ exports.updateFarmer = async (req, res) => {
         .json({ success: false, message: "No valid updates provided" });
     }
 
-    console.log("📝 Final update object:", JSON.stringify(updateObj, null, 2));
+console.log("========== UPDATE OBJECT SIZE ==========");
 
+for (const key of Object.keys(updateObj)) {
+  const value = updateObj[key];
+
+  let size = 0;
+
+  try {
+    size = JSON.stringify(value).length;
+  } catch {
+    size = 0;
+  }
+
+  console.log(`${key} -> ${size} chars`);
+}
     const updatedFarmer = await Farmer.findByIdAndUpdate(
       farmer._id,
       { $set: updateObj },
@@ -2796,6 +3102,8 @@ exports.updateFarmer = async (req, res) => {
     });
   }
 };
+
+
 
 // ==================== GET FARMER BY ID ====================
 exports.getFarmerById = async (req, res) => {

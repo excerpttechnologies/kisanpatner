@@ -254,7 +254,7 @@ const b2bUserSchema = new mongoose.Schema(
     Liked: [{ type: mongoose.Schema.Types.ObjectId, ref: "B2BProduct" }],
 
     // ── Status ───────────────────────────────────────────────────────────────
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: false },
   },
   {
     timestamps: true, // createdAt, updatedAt

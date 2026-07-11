@@ -430,6 +430,7 @@ const jwt    = require('jsonwebtoken');
 const axios  = require('axios');
 const User   = require('../models/User');       // ← farmer/trader — UNTOUCHED
 const B2BUser = require('../models/B2BUser');  // ← new B2B model
+const fs     = require('fs');
 
 // ─── WhatsApp OTP config (same as existing authcontroller.js) ─────────────────
 const WHATSAPP_TOKEN    = process.env.WHATSAPP_TOKEN    || '';
@@ -471,6 +472,19 @@ const signToken = (user) =>
 // ════════════════════════════════════════════════════════════════════════════════
 // EXISTING FUNCTIONS — COMPLETELY UNTOUCHED (farmer/trader)
 // ════════════════════════════════════════════════════════════════════════════════
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 exports.register = async (req, res) => {
   try {
@@ -524,14 +538,88 @@ exports.login = async (req, res) => {
 // ════════════════════════════════════════════════════════════════════════════════
 
 // POST /api/b2b/register
+// exports.b2bRegister = async (req, res) => {
+//   try {
+//     const {
+//       mobileNumber, password, mpin,
+//       businessName, businessType, gstNumber,
+//       name, email, state, district, taluk, village,
+//     } = req.body;
+
+//     // ── Validate required fields ───────────────────────────────────────────
+//     if (!mobileNumber || !/^[0-9]{10}$/.test(mobileNumber))
+//       return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number is required' });
+//     if (!businessName?.trim())
+//       return res.status(400).json({ success: false, message: 'Business name is required' });
+//     if (!businessType)
+//       return res.status(400).json({ success: false, message: 'Business type is required' });
+//     if (!password || password.length < 6)
+//       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+//     if (!mpin || !/^[0-9]{4}$/.test(mpin))
+//       return res.status(400).json({ success: false, message: 'MPIN must be exactly 4 digits' });
+
+//     // ── Check duplicate in B2B collection only ─────────────────────────────
+//     const existing = await B2BUser.findOne({ mobileNumber });
+//     if (existing)
+//       return res.status(409).json({ success: false, message: 'This mobile number is already registered. Please login.' });
+
+//     // ── Hash password and MPIN ─────────────────────────────────────────────
+//     const [hashedPwd, hashedMpin] = await Promise.all([
+//       bcrypt.hash(password, 10),
+//       bcrypt.hash(mpin, 10),
+//     ]);
+
+//     // ── Create B2B user ────────────────────────────────────────────────────
+//     const user = await B2BUser.create({
+//       mobileNumber,
+//       businessName: businessName.trim(),
+//       businessType,
+//       gstNumber:    gstNumber?.trim() || '',
+//       name:         name?.trim()      || businessName.trim(),
+//       email:        email?.trim()     || '',
+//       state:        state             || '',
+//       district:     district          || '',
+//       taluk:        taluk             || '',
+//       village:      village           || '',
+//       security: {
+//         password: hashedPwd,
+//         mpin:     hashedMpin,
+//       },
+//       role:     'b2b_buyer',
+//       isActive: true,
+//     });
+
+//     const token = signToken(user);
+
+//     return res.status(201).json({
+//       success: true,
+//       message: 'Registration successful! Welcome to KisanPatner B2B.',
+//       data: { token, user: user.toSafeObject() },
+//     });
+
+//   } catch (err) {
+//     console.error('B2B Register error:', err);
+//     if (err.code === 11000)
+//       return res.status(409).json({ success: false, message: 'This mobile number is already registered.' });
+//     return res.status(500).json({ success: false, message: 'Registration failed. Please try again.' });
+//   }
+// };
+
+
+
+
+
+
+
 exports.b2bRegister = async (req, res) => {
   try {
     const {
       mobileNumber, password, mpin,
       businessName, businessType, gstNumber,
       name, email, state, district, taluk, village,
+      kycDocType, kycDocNumber,
     } = req.body;
-
+ 
     // ── Validate required fields ───────────────────────────────────────────
     if (!mobileNumber || !/^[0-9]{10}$/.test(mobileNumber))
       return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number is required' });
@@ -543,18 +631,35 @@ exports.b2bRegister = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     if (!mpin || !/^[0-9]{4}$/.test(mpin))
       return res.status(400).json({ success: false, message: 'MPIN must be exactly 4 digits' });
-
+ 
+    // ── Validate KYC fields ─────────────────────────────────────────────────
+    const ALLOWED_KYC_TYPES = ['aadhar', 'pan', 'gst', 'shop_license', 'other'];
+    if (!kycDocType || !ALLOWED_KYC_TYPES.includes(kycDocType))
+      return res.status(400).json({ success: false, message: 'A valid KYC document type is required' });
+    if (!kycDocNumber?.trim())
+      return res.status(400).json({ success: false, message: 'KYC document number is required' });
+    if (!req.file)
+      return res.status(400).json({ success: false, message: 'KYC document photo is required' });
+ 
     // ── Check duplicate in B2B collection only ─────────────────────────────
     const existing = await B2BUser.findOne({ mobileNumber });
-    if (existing)
+    if (existing) {
+      // Clean up the uploaded file since registration won't proceed
+      fs.unlink(req.file.path, () => {});
       return res.status(409).json({ success: false, message: 'This mobile number is already registered. Please login.' });
-
+    }
+ 
     // ── Hash password and MPIN ─────────────────────────────────────────────
     const [hashedPwd, hashedMpin] = await Promise.all([
       bcrypt.hash(password, 10),
       bcrypt.hash(mpin, 10),
     ]);
-
+ 
+    // ── Build KYC document reference ────────────────────────────────────────
+    // req.file.path is the local disk path; swap this out for a cloud storage
+    // (S3 / GCS / Cloudinary) URL if the app uses one instead of local disk.
+    const kycDocumentUrl = `/uploads/kyc/${req.file.filename}`;
+ 
     // ── Create B2B user ────────────────────────────────────────────────────
     const user = await B2BUser.create({
       mobileNumber,
@@ -567,29 +672,39 @@ exports.b2bRegister = async (req, res) => {
       district:     district          || '',
       taluk:        taluk             || '',
       village:      village           || '',
+      kyc: {
+        docType:     kycDocType,
+        docNumber:   kycDocNumber.trim(),
+        documentUrl: kycDocumentUrl,
+        status:      'pending', // pending | verified | rejected
+        submittedAt: new Date(),
+      },
       security: {
         password: hashedPwd,
         mpin:     hashedMpin,
       },
       role:     'b2b_buyer',
-      isActive: true,
+      isActive: false,
     });
-
+ 
     const token = signToken(user);
-
+ 
     return res.status(201).json({
       success: true,
-      message: 'Registration successful! Welcome to KisanPatner B2B.',
+      message: 'Registration successful! Your KYC is under review. Welcome to KisanPatner B2B.',
       data: { token, user: user.toSafeObject() },
     });
-
+ 
   } catch (err) {
     console.error('B2B Register error:', err);
+    // Clean up uploaded file on any unexpected failure
+    if (req.file) fs.unlink(req.file.path, () => {});
     if (err.code === 11000)
       return res.status(409).json({ success: false, message: 'This mobile number is already registered.' });
     return res.status(500).json({ success: false, message: 'Registration failed. Please try again.' });
   }
 };
+
 
 // POST /api/b2b/send-otp
 exports.b2bSendOtp = async (req, res) => {
@@ -685,7 +800,7 @@ exports.b2bLoginMpin = async (req, res) => {
 
     const user = await B2BUser.findOne({ mobileNumber, isActive: true });
     if (!user)
-      return res.status(404).json({ success: false, message: 'No B2B account found with this mobile number.' });
+      return res.status(404).json({ success: false, message: 'Your B2B account is waiting for admin approval. Please wait until the administrator approves your account.' });
 
     const ok = await bcrypt.compare(mpin, user.security.mpin);
     if (!ok)
@@ -714,7 +829,7 @@ exports.b2bLoginPassword = async (req, res) => {
 
     const user = await B2BUser.findOne({ mobileNumber, isActive: true });
     if (!user)
-      return res.status(404).json({ success: false, message: 'No B2B account found with this mobile number.' });
+      return res.status(404).json({ success: false, message: 'Your B2B account is waiting for admin approval. Please wait until the administrator approves your account.' });
 
     const ok = await bcrypt.compare(password, user.security.password);
     if (!ok)

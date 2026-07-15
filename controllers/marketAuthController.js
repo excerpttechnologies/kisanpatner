@@ -1260,24 +1260,195 @@ exports.b2bRegister = async (req, res) => {
  
 // POST /api/auth/b2b/profile/:id/kyc  ── add one or more KYC docs after registration
 // Route must be mounted with the same kycUpload.array('kycDocuments', 5) middleware.
+// exports.b2bAddKycDocuments = async (req, res) => {
+//   try {
+//     const user = await B2BUser.findById(req.params.id);
+//     if (!user)
+//       return res.status(404).json({ success: false, message: 'B2B user not found' });
+ 
+//     if (!req.files || req.files.length === 0)
+//       return res.status(400).json({ success: false, message: 'At least one document photo is required' });
+ 
+//     const newDocs = buildKycDocuments(req);
+//     if (newDocs.length === 0) {
+//       (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+//       return res.status(400).json({ success: false, message: 'Each document needs a valid type and document number' });
+//     }
+ 
+//     user.kycDocuments = [...(user.kycDocuments || []), ...newDocs];
+//     await user.save();
+ 
+//     return res.json({
+//       success: true,
+//       message: 'Document(s) added successfully. Pending verification.',
+//       data: user.toSafeObject(),
+//     });
+//   } catch (err) {
+//     console.error('B2B Add KYC error:', err);
+//     (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+//     return res.status(500).json({ success: false, message: 'Failed to add document(s)' });
+//   }
+// };
+ 
+
+
+
+
+
+
+
+//15/7/26
+// POST /api/auth/b2b/profile/:id/kyc  ── add new doc(s), OR re-upload a single rejected doc
+// Route stays mounted with the same kycUpload.array('kycDocuments', 5) middleware.
+// exports.b2bAddKycDocuments = async (req, res) => {
+//   try {
+//     const user = await B2BUser.findById(req.params.id);
+//     if (!user)
+//       return res.status(404).json({ success: false, message: 'B2B user not found' });
+
+//     if (!req.files || req.files.length === 0)
+//       return res.status(400).json({ success: false, message: 'At least one document photo is required' });
+
+//     // ── Re-upload mode: user is replacing a specific REJECTED document ─────
+//     const replaceDocId = req.body.replaceDocId;
+
+//     if (replaceDocId) {
+//       const existingDoc = user.kycDocuments.id(replaceDocId);
+//       if (!existingDoc) {
+//         req.files.forEach(f => fs.unlink(f.path, () => {}));
+//         return res.status(404).json({ success: false, message: 'Document not found' });
+//       }
+//       if (existingDoc.status !== 'rejected') {
+//         req.files.forEach(f => fs.unlink(f.path, () => {}));
+//         return res.status(400).json({ success: false, message: 'Only rejected documents can be re-uploaded' });
+//       }
+
+//       const ALLOWED_KYC_TYPES = ['aadhar', 'pan', 'gst', 'shop_license', 'other'];
+//       const docType   = (Array.isArray(req.body.kycDocType)   ? req.body.kycDocType[0]   : req.body.kycDocType)   || existingDoc.docType;
+//       const docNumber = (Array.isArray(req.body.kycDocNumber) ? req.body.kycDocNumber[0] : req.body.kycDocNumber) || '';
+
+//       if (!ALLOWED_KYC_TYPES.includes(docType) || !docNumber.trim()) {
+//         req.files.forEach(f => fs.unlink(f.path, () => {}));
+//         return res.status(400).json({ success: false, message: 'A valid document type and number are required' });
+//       }
+
+//       // Remove old file from disk before replacing it
+//       if (existingDoc.documentUrl) {
+//         fs.unlink(`.${existingDoc.documentUrl}`, () => {});
+//       }
+
+//       existingDoc.docType         = docType;
+//       existingDoc.docNumber       = docNumber.trim();
+//       existingDoc.documentUrl     = `/uploads/kyc/${req.files[0].filename}`;
+//       existingDoc.status          = 'pending';
+//       existingDoc.submittedAt     = new Date();
+//       existingDoc.rejectionReason = undefined;
+
+//       // Only one file is expected for a re-upload — discard any extras
+//       req.files.slice(1).forEach(f => fs.unlink(f.path, () => {}));
+
+//       await user.save();
+//       return res.json({
+//         success: true,
+//         message: 'Document re-uploaded successfully. Pending verification.',
+//         data: user.toSafeObject(),
+//       });
+//     }
+
+//     // ── Default mode: adding brand-new document(s) (unchanged behavior) ────
+//     const newDocs = buildKycDocuments(req);
+//     if (newDocs.length === 0) {
+//       req.files.forEach(f => fs.unlink(f.path, () => {}));
+//       return res.status(400).json({ success: false, message: 'Each document needs a valid type and document number' });
+//     }
+
+//     user.kycDocuments = [...(user.kycDocuments || []), ...newDocs];
+//     await user.save();
+
+//     return res.json({
+//       success: true,
+//       message: 'Document(s) added successfully. Pending verification.',
+//       data: user.toSafeObject(),
+//     });
+//   } catch (err) {
+//     console.error('B2B Add KYC error:', err);
+//     (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+//     return res.status(500).json({ success: false, message: 'Failed to add document(s)' });
+//   }
+// };
+
+
+
+//dem0
+// POST /api/auth/b2b/profile/:id/kyc  ── add new doc(s), OR re-upload a single rejected doc
+// Route stays mounted with the same kycUpload.array('kycDocuments', 5) middleware.
 exports.b2bAddKycDocuments = async (req, res) => {
   try {
     const user = await B2BUser.findById(req.params.id);
     if (!user)
       return res.status(404).json({ success: false, message: 'B2B user not found' });
- 
+
     if (!req.files || req.files.length === 0)
       return res.status(400).json({ success: false, message: 'At least one document photo is required' });
- 
+
+    // ── Re-upload mode: user is replacing a specific REJECTED document ─────
+    const replaceDocId = req.body.replaceDocId;
+
+    if (replaceDocId) {
+      const existingDoc = user.kycDocuments.id(replaceDocId);
+      if (!existingDoc) {
+        req.files.forEach(f => fs.unlink(f.path, () => {}));
+        return res.status(404).json({ success: false, message: 'Document not found' });
+      }
+      if (existingDoc.status !== 'rejected') {
+        req.files.forEach(f => fs.unlink(f.path, () => {}));
+        return res.status(400).json({ success: false, message: 'Only rejected documents can be re-uploaded' });
+      }
+
+      const ALLOWED_KYC_TYPES = ['aadhar', 'pan', 'gst', 'shop_license', 'other'];
+      const docType   = (Array.isArray(req.body.kycDocType)   ? req.body.kycDocType[0]   : req.body.kycDocType)   || existingDoc.docType;
+      const docNumber = (Array.isArray(req.body.kycDocNumber) ? req.body.kycDocNumber[0] : req.body.kycDocNumber) || '';
+
+      if (!ALLOWED_KYC_TYPES.includes(docType) || !docNumber.trim()) {
+        req.files.forEach(f => fs.unlink(f.path, () => {}));
+        return res.status(400).json({ success: false, message: 'A valid document type and number are required' });
+      }
+
+      // Remove old file from disk before replacing it
+      if (existingDoc.documentUrl) {
+        fs.unlink(`.${existingDoc.documentUrl}`, () => {});
+      }
+
+      existingDoc.docType         = docType;
+      existingDoc.docNumber       = docNumber.trim();
+      existingDoc.documentUrl     = `/uploads/kyc/${req.files[0].filename}`;
+      existingDoc.status          = 'pending';
+      existingDoc.submittedAt     = new Date();
+      existingDoc.rejectionReason = undefined;
+      existingDoc.isReupload      = true;        // ← NEW
+      existingDoc.resubmittedAt   = new Date();  // ← NEW
+
+      // Only one file is expected for a re-upload — discard any extras
+      req.files.slice(1).forEach(f => fs.unlink(f.path, () => {}));
+
+      await user.save();
+      return res.json({
+        success: true,
+        message: 'Document re-uploaded successfully. Pending verification.',
+        data: user.toSafeObject(),
+      });
+    }
+
+    // ── Default mode: adding brand-new document(s) (unchanged behavior) ────
     const newDocs = buildKycDocuments(req);
     if (newDocs.length === 0) {
-      (req.files || []).forEach(f => fs.unlink(f.path, () => {}));
+      req.files.forEach(f => fs.unlink(f.path, () => {}));
       return res.status(400).json({ success: false, message: 'Each document needs a valid type and document number' });
     }
- 
+
     user.kycDocuments = [...(user.kycDocuments || []), ...newDocs];
     await user.save();
- 
+
     return res.json({
       success: true,
       message: 'Document(s) added successfully. Pending verification.',
@@ -1289,7 +1460,7 @@ exports.b2bAddKycDocuments = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to add document(s)' });
   }
 };
- 
+
 
 // POST /api/b2b/send-otp
 exports.b2bSendOtp = async (req, res) => {
